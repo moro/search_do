@@ -1,0 +1,3 @@
+sqlite:
+  :adapter: sqlite
+  :dbfile: acts_as_searchable_plugin.sqlite.db

@@ -1,0 +1,8 @@
+first:
+  id: 1
+  body: first
+
+second:
+  id: 2
+  type: CommentNotification
+  body: second

@@ -1,0 +1,32 @@
+= acts_as_searchable
+
+This library adds fulltext searching capabilities based on Hyper Estraier (http://hyperestraier.sourceforge.net/) to
+an ActiveRecord model.
+
+== Pre-requisites
+
+A working Hyper Estraier instance, setup instructions:
+
+* http://hyperestraier.sourceforge.net/nguide-en.html
+
+== Resources
+
+Install
+
+* gem install acts_as_searchable
+
+Bugtracking
+
+* http://trac.poocs.net/projects/plugins
+
+Rubyforge project
+
+* http://rubyforge.org/projects/ar-searchable
+
+RDocs
+
+* http://ar-searchable.rubyforge.org
+
+Subversion
+
+* svn://poocs.net/plugins/trunk/acts_as_searchable

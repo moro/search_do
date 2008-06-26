@@ -1,6 +1,7 @@
 $KCODE = 'u'
 require 'rubygems'
-gem 'activerecord', '2.0.2'
+#gem 'activerecord', '2.0.2'
+gem 'activerecord', '2.1.0'
 require 'active_record'
 
 $: << File.expand_path("../lib", File.dirname(__FILE__))

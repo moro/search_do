@@ -22,6 +22,8 @@
 # Thanks: Rick Olson (technoweenie) for his numerous plugins that served
 # as an example
 
+require 'dirty_tracking/self_made'
+require 'dirty_tracking/bridge'
 require 'vendor/estraierpure'
 
 module ActiveRecord #:nodoc:
@@ -141,22 +143,18 @@ module ActiveRecord #:nodoc:
             self.attributes_to_store = timestamp_attr.merge(self.attributes_to_store)
           end
           
-          send :attr_accessor, :changed_attributes
-
-          class_eval do
-            after_update  :update_index
-            after_create  :add_to_index
-            after_destroy :remove_from_index
-            after_save    :clear_changed_attributes
-
-            (if_changed + searchable_fields + attributes_to_store.collect { |attribute, method| method or attribute }).each do |attr_name|
-              define_method("#{attr_name}=") do |value|
-                write_changed_attribute attr_name, value
-              end
-            end
-
-            connect_estraier
+          if defined?(ActiveRecord::Dirty) && self.included_modules.include?(ActiveRecord::Dirty)
+            include ActiveRecord::Acts::Searchable::DirtyTracking::Bridge
+          else
+            include ActiveRecord::Acts::Searchable::DirtyTracking::SelfMade
           end
+
+          after_update  :update_index
+          after_create  :add_to_index
+          after_destroy :remove_from_index
+          after_save    :clear_changed_attributes
+
+          connect_estraier
         end
 
         # Perform a fulltext search against the Hyper Estraier index.
@@ -315,7 +313,7 @@ module ActiveRecord #:nodoc:
         
         # Update index for current instance
         def update_index(force = false)
-          return unless changed? or force
+          return unless need_update_index? or force
           remove_from_index
           add_to_index
         end
@@ -329,28 +327,11 @@ module ActiveRecord #:nodoc:
           get_doc_from(result)
         end
         
-        # If called with no parameters, gets whether the current model has changed and needs to updated in the index.
-        # If called with a single parameter, gets whether the parameter has changed.
-        def changed?(attr_name = nil)
-          changed_attributes and (attr_name.nil? ?
-            (not changed_attributes.length.zero?) : (changed_attributes.include?(attr_name.to_s)) )
-        end
-        
         protected
         
-        def clear_changed_attributes #:nodoc:
-          self.changed_attributes = []
-        end
-        
-        def write_changed_attribute(attr_name, attr_value) #:nodoc:
-          (self.changed_attributes ||= []) << attr_name.to_s unless self.changed?(attr_name) or self.send(attr_name) == attr_value
-          write_attribute(attr_name.to_s, attr_value)
-        end
-
         def add_to_index #:nodoc:
           seconds = Benchmark.realtime { estraier_connection.put_doc(document_object) }
           logger.debug "#{self.class.to_s} [##{id}] Adding to index (#{sprintf("%f", seconds)})"
-          
         end
         
         def remove_from_index #:nodoc:

@@ -76,6 +76,9 @@ module ActiveRecord #:nodoc:
     # See ActiveRecord::Acts::Searchable::ClassMethods#acts_as_searchable for per-model configuration options
     #
     module Searchable
+      MULTIBYTE_SPACE = [0x3000].pack("U")
+      PRESERVED_QUERY_WORDS_RE = /(AND|OR|ANDNOT)/
+
       def self.included(base) #:nodoc:
         base.extend ClassMethods        
       end
@@ -118,7 +121,9 @@ module ActiveRecord #:nodoc:
           cattr_accessor :searchable_fields, :attributes_to_store, :if_changed, :estraier_connection, :estraier_node,
             :estraier_host, :estraier_port, :estraier_user, :estraier_password
 
-          self.estraier_node        = estraier_config['node'] || RAILS_ENV
+          node_prefix = estraier_config['node'] || RAILS_ENV
+
+          self.estraier_node        = node_prefix + '_' + self.table_name
           self.estraier_host        = estraier_config['host'] || 'localhost'
           self.estraier_port        = estraier_config['port'] || 1978
           self.estraier_user        = estraier_config['user'] || 'admin'
@@ -126,6 +131,15 @@ module ActiveRecord #:nodoc:
           self.searchable_fields    = options[:searchable_fields] || [ :body ]
           self.attributes_to_store  = options[:attributes] || {}
           self.if_changed           = options[:if_changed] || []
+
+          unless options[:ignore_timestamp] && self.record_timestamps
+            timestamp_attr = {
+              "cdate" => %w(created_at created_on).detect{|col| self.column_names.include?(col) },
+              "mdate" => %w(updated_at updated_on).detect{|col| self.column_names.include?(col) },
+            }
+
+            self.attributes_to_store = timestamp_attr.merge(self.attributes_to_store)
+          end
           
           send :attr_accessor, :changed_attributes
 
@@ -171,20 +185,33 @@ module ActiveRecord #:nodoc:
         #   http://hyperestraier.sourceforge.net/uguide-en.html#searchcond
         #
         def fulltext_search(query = "", options = {})
-          options.reverse_merge!(:limit => 100, :offset => 0)
-          options.assert_valid_keys(VALID_FULLTEXT_OPTIONS)
+          ids = nil
 
           find_options = options[:find] || {}
           [ :limit, :offset ].each { |k| find_options.delete(k) } unless find_options.blank?
 
-          cond = new_estraier_condition
-          cond.set_phrase query
-          [options[:attributes]].flatten.reject { |a| a.blank? }.each do |attr|
-            cond.add_attr attr
+          ids = matched_ids(query, options)
+          find_by_ids_scope(ids, find_options)
+        end
+
+        # this methods is NOT compat with original AAS
+        def find_fulltext(query, options={}, with_mdate_desc_order=true)
+          fulltext_option = {}
+          if with_mdate_desc_order
+            fulltext_option[:order] = "@mdate NUMD"
           end
-          cond.set_max   options[:limit]
-          cond.set_skip  options[:offset]
-          cond.set_order options[:order] if options[:order]
+          ids = matched_ids(query, fulltext_option)
+          find_by_ids_scope(ids, options)
+        end
+
+        def matched_ids(query = "", options = {})
+          matches = raw_matches(query, options)
+          return matches.map{|doc| Integer(doc.attr("db_id")) }
+        end
+
+        def raw_matches(query = "", options = {})
+
+          cond = build_fulltext_condition(query, options)
 
           matches = nil
           seconds = Benchmark.realtime do
@@ -192,19 +219,32 @@ module ActiveRecord #:nodoc:
             return (result.doc_num rescue 0) if options[:count]
             return [] unless result
             matches = get_docs_from(result)
-            return matches if options[:raw_matches]
           end
 
-          logger.debug(
+          logger.debug do
             connection.send(:format_log_entry, 
               "#{self.to_s} seach for '#{query}' (#{sprintf("%f", seconds)})",
-              "Condition: #{cond.to_s}"
-            )
-          )
-            
-          matches.blank? ? [] : find(matches.collect { |m| m.attr('db_id') }, find_options)
+              "Condition: #{cond.to_s}")
+          end
+
+          return matches
         end
-        
+
+        def build_fulltext_condition(query, options = {})
+          options = {:limit => 100, :offset => 0}.merge(options)
+          options.assert_valid_keys(VALID_FULLTEXT_OPTIONS)
+
+          cond = new_estraier_condition
+          cond.set_phrase tokenize_query(query)
+          [options[:attributes]].flatten.reject { |a| a.blank? }.each do |attr|
+            cond.add_attr attr
+          end
+          cond.set_max   options[:limit]
+          cond.set_skip  options[:offset]
+          cond.set_order options[:order] if options[:order]
+          return cond
+        end
+
         # Clear all entries from index
         def clear_index!
           estraier_index.each { |d| estraier_connection.out_doc(d.attr('@id')) unless d.nil? }
@@ -217,7 +257,7 @@ module ActiveRecord #:nodoc:
         
         def estraier_index #:nodoc:
           cond = EstraierPure::Condition::new
-          cond.add_attr("type STREQ #{self.to_s}")
+          cond.add_attr("db_id NUMGT 0")
           result = estraier_connection.search(cond, 1)
           docs = get_docs_from(result)
           docs
@@ -234,9 +274,16 @@ module ActiveRecord #:nodoc:
         def new_estraier_condition #:nodoc
           cond = EstraierPure::Condition::new
           cond.set_options(EstraierPure::Condition::SIMPLE | EstraierPure::Condition::USUAL)
-          cond.add_attr("type STREQ #{ self.to_s }") if subclasses.blank?
-          cond.add_attr("type_base STREQ #{ base_class.to_s }") unless base_class == self and subclasses.blank?
           cond
+        end
+
+        def tokenize_query(query)
+          tokens = query.scan(/'([^']*)'|"([^"]*)"|([^\s#{MULTIBYTE_SPACE}]*)/).flatten.reject(&:blank?)
+          tokens.map do |token|
+            token.gsub!(PRESERVED_QUERY_WORDS_RE, $1.downcase) if token =~ PRESERVED_QUERY_WORDS_RE 
+            token.gsub!(/\A['"]|['"]\z/, '') # strip quatos
+            token
+          end.join(" AND ")
         end
 
         protected
@@ -250,6 +297,15 @@ module ActiveRecord #:nodoc:
         def estraier_config #:nodoc:
           configurations[RAILS_ENV]['estraier'] or {}
         end
+
+        private
+        def find_by_ids_scope(ids, options={})
+          return [] if ids.blank?
+          with_scope(:find=>{:conditions=>["#{table_name}.id IN (?)", ids]}) do
+            return find(:all, options)
+          end
+        end
+
       end
       
       module ActMethods
@@ -310,7 +366,6 @@ module ActiveRecord #:nodoc:
         def document_object #:nodoc:
           doc = EstraierPure::Document::new
           doc.add_attr('db_id', "#{id}")
-          doc.add_attr('type', "#{self.class.to_s}")
           # Use type instead of self.class.subclasses as the latter is a protected method
           unless self.class.base_class == self.class and not attribute_names.include?("type")
             doc.add_attr("type_base", "#{ self.class.base_class.to_s }")
@@ -321,7 +376,7 @@ module ActiveRecord #:nodoc:
             attributes_to_store.each do |attribute, method|
               value = send(method || attribute)
               value = value.xmlschema if value.is_a?(Time)
-              doc.add_attr(attribute_name(attribute), send(method || attribute).to_s)
+              doc.add_attr(attribute_name(attribute), value.to_s)
             end
           end
 

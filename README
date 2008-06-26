@@ -3,13 +3,20 @@
 This library adds fulltext searching capabilities based on Hyper Estraier (http://hyperestraier.sourceforge.net/) to
 an ActiveRecord model.
 
+Original is written by scoop see
+- http://github.com/scoop/acts_as_searchable/tree/master
+- http://poocs.net/2006/4/6/introducing-acts-as-searchable
+
+This fork is maintained by MOROHASHI Kyosuke
+- http://github.com/moro/acts_as_searchable/tree/master
+
 == Pre-requisites
 
 A working Hyper Estraier instance, setup instructions:
 
 * http://hyperestraier.sourceforge.net/nguide-en.html
 
-== Resources
+== Original Resources
 
 Install
 
@@ -30,3 +37,4 @@ RDocs
 Subversion
 
 * svn://poocs.net/plugins/trunk/acts_as_searchable
+

@@ -6,6 +6,7 @@ ActiveRecord::Schema.define(:version => 1) do
   create_table "stories" do |t|
     t.string   "title"
     t.text     "body"
+    t.integer  "popularity", :default =>0
     t.timestamps
   end
 end

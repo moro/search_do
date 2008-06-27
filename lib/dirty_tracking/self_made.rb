@@ -7,7 +7,7 @@ module ActiveRecord::Acts
           base.class_eval do
             attr_accessor :changed_attributes
 
-            (if_changed + searchable_fields + attributes_to_store.collect { |attribute, method| method or attribute }).each do |attr_name|
+            fulltext_index_observing_fields.each do |attr_name|
               define_method("#{attr_name}=") do |value|
                 write_changed_attribute attr_name, value
               end

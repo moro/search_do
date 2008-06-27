@@ -1,5 +1,5 @@
 # Copyright (c) 2006 Patrick Lenz
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
 # "Software"), to deal in the Software without restriction, including
@@ -7,10 +7,10 @@
 # distribute, sublicense, and/or sell copies of the Software, and to
 # permit persons to whom the Software is furnished to do so, subject to
 # the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be
 # included in all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -82,9 +82,9 @@ module ActiveRecord #:nodoc:
       PRESERVED_QUERY_WORDS_RE = /(AND|OR|ANDNOT)/
 
       def self.included(base) #:nodoc:
-        base.extend ClassMethods        
+        base.extend ClassMethods
       end
-      
+
       module ClassMethods
         VALID_FULLTEXT_OPTIONS = [:limit, :offset, :order, :attributes, :raw_matches, :find, :count]
 
@@ -107,7 +107,7 @@ module ActiveRecord #:nodoc:
         # Attributes that match the reserved names of the Hyper Estraier system attributes are mapped automatically. This is something
         # to keep in mind for custom ordering options or additional query constraints in <tt>fulltext_search</tt>
         # For a list of these attributes see <tt>EstraierPure::SYSTEM_ATTRIBUTES</tt> or visit:
-        # 
+        #
         #   http://hyperestraier.sourceforge.net/uguide-en.html#attributes
         #
         # From the example above:
@@ -119,9 +119,9 @@ module ActiveRecord #:nodoc:
           return if self.included_modules.include?(ActiveRecord::Acts::Searchable::ActMethods)
 
           send :include, ActiveRecord::Acts::Searchable::ActMethods
-          
+
           cattr_accessor :searchable_fields, :attributes_to_store, :if_changed, :estraier_connection, :estraier_node,
-            :estraier_host, :estraier_port, :estraier_user, :estraier_password
+            :estraier_host, :estraier_port, :estraier_user, :estraier_password, :fulltext_index_observing_fields
 
           node_prefix = estraier_config['node'] || RAILS_ENV
 
@@ -142,7 +142,10 @@ module ActiveRecord #:nodoc:
 
             self.attributes_to_store = timestamp_attr.merge(self.attributes_to_store)
           end
-          
+
+          self.fulltext_index_observing_fields =
+            (if_changed + searchable_fields + attributes_to_store.values).map(&:to_s).uniq
+
           if defined?(ActiveRecord::Dirty) && self.included_modules.include?(ActiveRecord::Dirty)
             include ActiveRecord::Acts::Searchable::DirtyTracking::Bridge
           else
@@ -169,7 +172,7 @@ module ActiveRecord #:nodoc:
         # * <tt>count</tt>       - Set this to <tt>true</tt> if you're using <tt>fulltext_search</tt> in conjunction with <tt>ActionController::Pagination</tt> to return the number of matches only
         #
         # Examples:
-        # 
+        #
         #   Article.fulltext_search("biscuits AND gravy")
         #   Article.fulltext_search("biscuits AND gravy", :limit => 15, :offset => 14)
         #   Article.fulltext_search("biscuits AND gravy", :attributes => "tag STRINC food")
@@ -179,7 +182,7 @@ module ActiveRecord #:nodoc:
         #   Article.fulltext_search("biscuits AND gravy", :find => { :order => :title, :include => :comments })
         #
         # Consult the Hyper Estraier documentation on proper query syntax:
-        # 
+        #
         #   http://hyperestraier.sourceforge.net/uguide-en.html#searchcond
         #
         def fulltext_search(query = "", options = {})
@@ -220,7 +223,7 @@ module ActiveRecord #:nodoc:
           end
 
           logger.debug do
-            connection.send(:format_log_entry, 
+            connection.send(:format_log_entry,
               "#{self.to_s} seach for '#{query}' (#{sprintf("%f", seconds)})",
               "Condition: #{cond.to_s}")
           end
@@ -247,12 +250,12 @@ module ActiveRecord #:nodoc:
         def clear_index!
           estraier_index.each { |d| estraier_connection.out_doc(d.attr('@id')) unless d.nil? }
         end
-        
+
         # Peform a full re-index of the model data for this model
         def reindex!
           find(:all).each { |r| r.update_index(true) }
         end
-        
+
         def estraier_index #:nodoc:
           cond = EstraierPure::Condition::new
           cond.add_attr("db_id NUMGT 0")
@@ -260,7 +263,7 @@ module ActiveRecord #:nodoc:
           docs = get_docs_from(result)
           docs
         end
-        
+
         def get_docs_from(result) #:nodoc:
           docs = []
           for i in 0...result.doc_num
@@ -278,20 +281,20 @@ module ActiveRecord #:nodoc:
         def tokenize_query(query)
           tokens = query.scan(/'([^']*)'|"([^"]*)"|([^\s#{MULTIBYTE_SPACE}]*)/).flatten.reject(&:blank?)
           tokens.map do |token|
-            token.gsub!(PRESERVED_QUERY_WORDS_RE, $1.downcase) if token =~ PRESERVED_QUERY_WORDS_RE 
+            token.gsub!(PRESERVED_QUERY_WORDS_RE, $1.downcase) if token =~ PRESERVED_QUERY_WORDS_RE
             token.gsub!(/\A['"]|['"]\z/, '') # strip quatos
             token
           end.join(" AND ")
         end
 
         protected
-        
+
         def connect_estraier #:nodoc:
           self.estraier_connection = EstraierPure::Node::new
           self.estraier_connection.set_url("http://#{self.estraier_host}:#{self.estraier_port}/node/#{self.estraier_node}")
           self.estraier_connection.set_auth(self.estraier_user, self.estraier_password)
         end
-        
+
         def estraier_config #:nodoc:
           configurations[RAILS_ENV]['estraier'] or {}
         end
@@ -305,19 +308,19 @@ module ActiveRecord #:nodoc:
         end
 
       end
-      
+
       module ActMethods
         def self.included(base) #:nodoc:
           base.extend ClassMethods
         end
-        
+
         # Update index for current instance
         def update_index(force = false)
           return unless need_update_index? or force
           remove_from_index
           add_to_index
         end
-        
+
         # Retrieve index record for current model object
         def estraier_doc
           cond = self.class.new_estraier_condition
@@ -326,20 +329,20 @@ module ActiveRecord #:nodoc:
           return unless result and result.doc_num > 0
           get_doc_from(result)
         end
-        
+
         protected
-        
+
         def add_to_index #:nodoc:
           seconds = Benchmark.realtime { estraier_connection.put_doc(document_object) }
           logger.debug "#{self.class.to_s} [##{id}] Adding to index (#{sprintf("%f", seconds)})"
         end
-        
+
         def remove_from_index #:nodoc:
           return unless doc = estraier_doc
           seconds = Benchmark.realtime { self.estraier_connection.out_doc(doc.attr('@id')) }
           logger.debug "#{self.class.to_s} [##{id}] Removing from index (#{sprintf("%f", seconds)})"
         end
-        
+
         def get_doc_from(result) #:nodoc:
           self.class.get_docs_from(result).first
         end
@@ -352,7 +355,7 @@ module ActiveRecord #:nodoc:
             doc.add_attr("type_base", "#{ self.class.base_class.to_s }")
           end
           doc.add_attr('@uri', "/#{self.class.to_s}/#{id}")
-          
+
           unless attributes_to_store.blank?
             attributes_to_store.each do |attribute, method|
               value = send(method || attribute)
@@ -365,9 +368,9 @@ module ActiveRecord #:nodoc:
             doc.add_text send(f)
           end
 
-          doc          
+          doc
         end
-        
+
         def attribute_name(attribute)
           EstraierPure::SYSTEM_ATTRIBUTES.include?(attribute.to_s) ? "@#{attribute}" : "#{attribute}"
         end
@@ -382,7 +385,7 @@ module EstraierPure
   unless defined?(SYSTEM_ATTRIBUTES)
     SYSTEM_ATTRIBUTES = %w( uri digest cdate mdate adate title author type lang genre size weight misc )
   end
-  
+
   class Node
     def list
       return false unless @url
@@ -398,7 +401,7 @@ module EstraierPure
       lines.collect { |l| val = l.split(/\t/) and { :id => val[0], :uri => val[1], :digest => val[2] } }
     end
   end
-  
+
   class Condition
     def to_s
       "phrase: %s, attrs: %s, max: %s, options: %s, order: %s, skip: %s" % [ phrase, attrs * ', ', max, options, order, skip ]

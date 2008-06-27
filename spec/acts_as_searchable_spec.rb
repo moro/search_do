@@ -156,5 +156,25 @@ describe Story, "extended by acts_as_searchable_enhance" do
       Story.should have(3).estraier_index
     end
   end
+
+  describe "partial updating" do
+    fixtures :stories
+    before do
+      @story = Story.find(:first)
+      @story.stub!(:record_timestamps).and_return(false)
+    end
+
+    it "should update fulltext index when update 'title'" do
+      Story.estraier_connection.should_receive(:put_doc).once
+      @story.title = "new title"
+      @story.save
+    end
+
+    it "should update fulltext index when update 'popularity'" do
+      Story.estraier_connection.should_not_receive(:put_doc)
+      @story.popularity = 20
+      @story.save
+    end
+  end
 end
 

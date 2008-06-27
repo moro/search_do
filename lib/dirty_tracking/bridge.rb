@@ -5,10 +5,11 @@ module ActiveRecord::Acts
 
         def need_update_index?(attr_name = nil)
           return false unless changed?
+          cs = changed_attributes.keys
           if attr_name
-            changed_attributes.keys.include?(attr_name)
+            cs.include?(attr_name)
           else
-            true
+            self.class.fulltext_index_observing_fields.any?{|t| cs.include?(t) }
           end
         end
 

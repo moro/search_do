@@ -326,7 +326,7 @@ module ActiveRecord #:nodoc:
         # Retrieve index record for current model object
         def estraier_doc
           cond = self.class.new_estraier_condition
-          cond.add_attr("db_id STREQ #{self.id}")
+          cond.add_attr("db_id NUMEQ #{self.id}")
           result = self.estraier_connection.search(cond, 1)
           return unless result and result.doc_num > 0
           get_doc_from(result)

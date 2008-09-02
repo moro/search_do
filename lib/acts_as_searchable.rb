@@ -276,23 +276,22 @@ module ActsAsSearchable
     end
 
     def search_attrs
-      attrs = { 'db_id' => id }
+      attrs = { 'db_id' => id.to_s,
+                '@uri' => "/#{self.class.to_s}/#{id}" }
       # for STI
       if self.class.descends_from_active_record?
         attrs["type_base"] = self.class.base_class.to_s
       end
-      attrs["@uri"] = "/#{self.class.to_s}/#{id}"
 
       unless attributes_to_store.blank?
         attributes_to_store.each do |attribute, method|
           value = send(method || attribute)
           value = value.xmlschema if value.is_a?(Time)
-          doc.add_attr(attribute_name(attribute), value.to_s)
+          attrs[attribute_name(attribute)] = value.to_s
         end
       end
       attrs
     end
-
   end
 end
 

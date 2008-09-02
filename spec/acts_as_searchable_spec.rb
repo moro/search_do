@@ -4,10 +4,7 @@ require 'digest/sha1'
 
 describe Story, "extended by acts_as_searchable_enhance" do
   before(:all) do
-    logger = Object.new
-    def logger.debug(*args)
-      # do nothing
-    end
+    logger = Logger.new("/dev/null")
     Story.logger = logger
   end
 
@@ -55,15 +52,15 @@ describe Story, "extended by acts_as_searchable_enhance" do
 
       @mock_results = @story_ids.map{|id| mock("ResultDocument_#{id}", :attr => id) }
       nres = EstraierPure::NodeResult.new(@mock_results, {})
-      Story.search_backend.stub!(:raw_search).and_return(nres)
+      Story.search_backend.connection.stub!(:search).and_return(nres)
     end
 
     it "matched_ids should == [story_ids]" do
       Story.matched_ids("hoge").should == @story_ids
     end
 
-    it "matched_ids should call search_backend#raw_search()" do
-      Story.search_backend.should_receive(:raw_search)
+    it "matched_ids should call EstraierPure::Node#search()" do
+      Story.search_backend.connection.should_receive(:search)
       Story.matched_ids("hoge")
     end
   end
@@ -76,11 +73,11 @@ describe Story, "extended by acts_as_searchable_enhance" do
       mock_results = stories.map{|s| mock("ResultDocument_#{s.id}", :attr => s.id) }
 
       nres = EstraierPure::NodeResult.new(mock_results, {})
-      Story.search_backend.stub!(:raw_search).and_return(nres)
+      Story.search_backend.connection.stub!(:search).and_return(nres)
     end
 
     it "should call EstraierPure::Node#delete_from_index" do
-      Story.search_backend.should_receive(:delete_from_index)
+      Story.search_backend.connection.should_receive(:out_doc)
       @story.remove_from_index
     end
   end

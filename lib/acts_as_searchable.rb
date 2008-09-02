@@ -226,7 +226,7 @@ module ActsAsSearchable
     protected
 
     def connect_backend #:nodoc:
-      self.search_backend = Backends::HyperEstraier.new(estraier_node,
+      self.search_backend = Backends::HyperEstraier.new(self,
                                                         estraier_host, estraier_port,
                                                         estraier_user, estraier_password)
     end
@@ -257,24 +257,31 @@ module ActsAsSearchable
     end
 
     def add_to_index #:nodoc:
-      seconds = Benchmark.realtime { search_backend.add_to_index(document_object) }
-      logger.debug "#{self.class.to_s} [##{id}] Adding to index (#{sprintf("%f", seconds)})"
+      search_backend.add_to_index(search_texts, search_attrs)
     end
 
     def remove_from_index #:nodoc:
-      search_backend.remove_from_index(self)
+      search_backend.remove_from_index(self.id)
     end
 
     protected
 
-    def document_object #:nodoc:
-      doc = EstraierPure::Document::new
-      doc.add_attr('db_id', "#{id}")
-      # Use type instead of self.class.subclasses as the latter is a protected method
-      unless self.class.descends_from_active_record?
-        doc.add_attr("type_base", "#{ self.class.base_class.to_s }")
+    def attribute_name(attribute)
+      EstraierPure::SYSTEM_ATTRIBUTES.include?(attribute.to_s) ? "@#{attribute}" : "#{attribute}"
+    end
+
+    private
+    def search_texts
+      searchable_fields.map{|f| send(f) }
+    end
+
+    def search_attrs
+      attrs = { 'db_id' => id }
+      # for STI
+      if self.class.descends_from_active_record?
+        attrs["type_base"] = self.class.base_class.to_s
       end
-      doc.add_attr('@uri', "/#{self.class.to_s}/#{id}")
+      attrs["@uri"] = "/#{self.class.to_s}/#{id}"
 
       unless attributes_to_store.blank?
         attributes_to_store.each do |attribute, method|
@@ -283,17 +290,9 @@ module ActsAsSearchable
           doc.add_attr(attribute_name(attribute), value.to_s)
         end
       end
-
-      searchable_fields.each do |f|
-        doc.add_text send(f)
-      end
-
-      doc
+      attrs
     end
 
-    def attribute_name(attribute)
-      EstraierPure::SYSTEM_ATTRIBUTES.include?(attribute.to_s) ? "@#{attribute}" : "#{attribute}"
-    end
   end
 end
 

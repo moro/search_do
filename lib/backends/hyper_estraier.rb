@@ -9,10 +9,11 @@ module ActsAsSearchable
       attr_reader :connection
 
       # FIXME use URI
-      def initialize(node, host, port, user, password)
+      def initialize(ar_class, host, port, user, password)
+        @ar_class = ar_class
         @connection = EstraierPure::Node.new
 
-        @connection.set_url("http://#{host}:#{port}/node/#{node}")
+        @connection.set_url("http://#{host}:#{port}/node/#{ar_class.estraier_node}")
         @connection.set_auth(user, password)
       end
 
@@ -23,10 +24,10 @@ module ActsAsSearchable
         get_docs_from(result)
       end
 
-      def search_one_by_model(model)
+      def search_one_by_db_id(id)
         cond = EstraierPure::Condition::new
         cond.set_options(EstraierPure::Condition::SIMPLE | EstraierPure::Condition::USUAL)
-        cond.add_attr("db_id NUMEQ #{model.id}")
+        cond.add_attr("db_id NUMEQ #{id}")
 
         search_one(cond, 1)
       end
@@ -64,6 +65,30 @@ module ActsAsSearchable
         return matches
       end
 
+      def add_to_index(texts, attrs)
+        doc = EstraierPure::Document::new
+        texts.each{|t| doc.add_text(t) }
+        attrs.each{|k,v| doc.add_attr(k, v) }
+
+        log = "#{@ar_class.name} [##{attrs["db_id"]}] Adding to index"
+        benchmark(log){ @connection.put_doc(doc) }
+      end
+
+      def remove_from_index(db_id)
+        return unless doc = search_one_by_db_id(db_id)
+        log = "#{@ar_class.name} [##{db_id}] Removing from index"
+        benchmark(log){ delete_from_index(doc) }
+      end
+
+      def clear_index!
+        benchmark("Deleting all index"){ index.each { |d| delete_from_index(d) } }
+      end
+
+      private
+      def raw_search(cond, num)
+        @connection.search(cond, num)
+      end
+
       def build_fulltext_condition(query, options = {})
         options = {:limit => 100, :offset => 0}.merge(options)
         # options.assert_valid_keys(VALID_FULLTEXT_OPTIONS)
@@ -82,26 +107,12 @@ module ActsAsSearchable
         return cond
       end
 
-      def raw_search(cond, num)
-        @connection.search(cond, num)
-      end
-
-      def add_to_index(document)
-        @connection.put_doc(document)
-      end
-
       def delete_from_index(document)
         @connection.out_doc(document.attr('@id'))
       end
 
-      def remove_from_index(model)
-        return unless doc = search_one_by_model(model)
-        seconds = Benchmark.realtime { delete_from_index(doc) }
-        # logger.debug "#{model.class.to_s} [##{model.id}] Removing from index (#{sprintf("%f", seconds)})"
-      end
-
-      def clear_index!
-        index.each { |d| delete_from_index(d) }
+      def benchmark(log, &block)
+        @ar_class.benchmark(log, &block)
       end
     end
   end

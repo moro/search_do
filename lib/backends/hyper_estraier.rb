@@ -23,20 +23,22 @@ module ActsAsSearchable
         get_docs_from(result)
       end
 
-      def get_docs_from(result) #:nodoc:
-        (0...result.doc_num).inject([]){|r, i| r << result.get_doc(i) }
-      end
-
-      def get_doc_from(result) #:nodoc:
-        self.class.get_docs_from(result).first
-      end
-
       def search_one_by_model(model)
         cond = EstraierPure::Condition::new
         cond.set_options(EstraierPure::Condition::SIMPLE | EstraierPure::Condition::USUAL)
         cond.add_attr("db_id NUMEQ #{model.id}")
 
         search_one(cond, 1)
+      end
+
+      def search_one(cond, num=1)
+        result = raw_search(cond, num)
+        return nil if result.nil? || result.doc_num.zero?
+        get_docs_from(result).first
+      end
+
+      def get_docs_from(result) #:nodoc:
+        (0...result.doc_num).inject([]){|r, i| r << result.get_doc(i) }
       end
 
       def raw_matches(query, options = {})
@@ -51,7 +53,8 @@ module ActsAsSearchable
           matches = get_docs_from(result)
         end
 
-=begin # FIXME
+        # FIXME use logger
+=begin
         logger.debug do
           connection.send(:format_log_entry,
             "#{self.to_s} seach for '#{query}' (#{sprintf("%f", seconds)})",
@@ -77,14 +80,6 @@ module ActsAsSearchable
         cond.set_skip  options[:offset]
         cond.set_order options[:order] if options[:order]
         return cond
-      end
-
-      def search_one(cond, num=1)
-        result = raw_search(cond, num)
-        if result.nil? || result.doc_num > 0
-          return nil
-        end
-        get_docs_from(result).first
       end
 
       def raw_search(cond, num)

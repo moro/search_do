@@ -256,8 +256,6 @@ module ActsAsSearchable
       add_to_index
     end
 
-    protected
-
     def add_to_index #:nodoc:
       seconds = Benchmark.realtime { search_backend.add_to_index(document_object) }
       logger.debug "#{self.class.to_s} [##{id}] Adding to index (#{sprintf("%f", seconds)})"
@@ -266,6 +264,8 @@ module ActsAsSearchable
     def remove_from_index #:nodoc:
       search_backend.remove_from_index(self)
     end
+
+    protected
 
     def document_object #:nodoc:
       doc = EstraierPure::Document::new

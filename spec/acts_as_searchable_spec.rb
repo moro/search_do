@@ -68,6 +68,23 @@ describe Story, "extended by acts_as_searchable_enhance" do
     end
   end
 
+  describe "remove from index" do
+    fixtures :stories
+    before do
+      stories = Story.find(:all, :limit=>2)
+      @story = stories.first
+      mock_results = stories.map{|s| mock("ResultDocument_#{s.id}", :attr => s.id) }
+
+      nres = EstraierPure::NodeResult.new(mock_results, {})
+      Story.search_backend.stub!(:raw_search).and_return(nres)
+    end
+
+    it "should call EstraierPure::Node#delete_from_index" do
+      Story.search_backend.should_receive(:delete_from_index)
+      @story.remove_from_index
+    end
+  end
+
   describe "matched_ids => [:id] and find_option=>{:condition => 'id = :id'}" do
     fixtures :stories
     before do

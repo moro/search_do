@@ -152,10 +152,12 @@ module ActiveRecord #:nodoc:
             include ActiveRecord::Acts::Searchable::DirtyTracking::SelfMade
           end
 
-          after_update  :update_index
-          after_create  :add_to_index
-          after_destroy :remove_from_index
-          after_save    :clear_changed_attributes
+          unless options[:auto_update] == false
+            after_update  :update_index
+            after_create  :add_to_index
+            after_destroy :remove_from_index
+            after_save    :clear_changed_attributes
+          end
 
           connect_estraier
         end
@@ -316,7 +318,7 @@ module ActiveRecord #:nodoc:
 
         # Update index for current instance
         def update_index(force = false)
-          return unless need_update_index? or force
+          return unless (need_update_index? || force)
           remove_from_index
           add_to_index
         end
@@ -351,7 +353,7 @@ module ActiveRecord #:nodoc:
           doc = EstraierPure::Document::new
           doc.add_attr('db_id', "#{id}")
           # Use type instead of self.class.subclasses as the latter is a protected method
-          unless self.class.base_class == self.class and not attribute_names.include?("type")
+          unless self.class.descends_from_active_record?
             doc.add_attr("type_base", "#{ self.class.base_class.to_s }")
           end
           doc.add_attr('@uri', "/#{self.class.to_s}/#{id}")

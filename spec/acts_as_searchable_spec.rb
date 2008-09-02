@@ -147,9 +147,12 @@ describe Story, "extended by acts_as_searchable_enhance" do
     end
 
     # asserts HE raw_match order
-    it "should searchable with '記憶', orderd should work" do
-      Story.matched_ids('記憶', :order => "@mdate NUMA").should == [102, 101]
+    it "should searchable with '記憶', orderd @madate decend should work" do
       Story.matched_ids('記憶', :order => "@mdate NUMD").should == [101, 102]
+    end
+
+    it "should searchable with '記憶', orderd @mdate ascend should work" do
+      Story.matched_ids('記憶', :order => "@mdate NUMA").should == [102, 101]
     end
 
     it "should have(3).estraier_index" do
@@ -175,6 +178,23 @@ describe Story, "extended by acts_as_searchable_enhance" do
       @story.popularity = 20
       @story.save
     end
+  end
+end
+
+describe "StoryWithoutAutoUpdate" do
+  before(:all) do
+    class StoryWithoutAutoUpdate < ActiveRecord::Base
+      set_table_name :stories
+      acts_as_searchable :searchable_fields=>[:title, :body], :auto_update=>false
+    end
+  end
+
+  it "should have callbak :update_index" do
+    StoryWithoutAutoUpdate.after_update.should_not include(:update_index)
+  end
+
+  it "should have callbak :add_to_index" do
+    StoryWithoutAutoUpdate.after_create.should_not include(:add_to_index)
   end
 end
 

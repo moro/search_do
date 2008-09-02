@@ -6,6 +6,8 @@ require 'acts_as_searchable/utils'
 module ActsAsSearchable
   module Backends
     class HyperEstraier
+      SYSTEM_ATTRIBUTES = %w( uri digest cdate mdate adate title author type lang genre size weight misc )
+
       attr_reader :connection
 
       # FIXME use URI
@@ -24,25 +26,17 @@ module ActsAsSearchable
         get_docs_from(result)
       end
 
-      def search_one_by_db_id(id)
+      def search_by_db_id(id)
         cond = EstraierPure::Condition::new
         cond.set_options(EstraierPure::Condition::SIMPLE | EstraierPure::Condition::USUAL)
         cond.add_attr("db_id NUMEQ #{id}")
 
-        search_one(cond, 1)
-      end
-
-      def search_one(cond, num=1)
-        result = raw_search(cond, num)
+        result = raw_search(cond, 1)
         return nil if result.nil? || result.doc_num.zero?
         get_docs_from(result).first
       end
 
-      def get_docs_from(result) #:nodoc:
-        (0...result.doc_num).inject([]){|r, i| r << result.get_doc(i) }
-      end
-
-      def raw_matches(query, options = {})
+      def serch_all(query, options = {})
         cond = build_fulltext_condition(query, options)
 
         matches = nil
@@ -68,14 +62,14 @@ module ActsAsSearchable
       def add_to_index(texts, attrs)
         doc = EstraierPure::Document::new
         texts.each{|t| doc.add_text(t) }
-        attrs.each{|k,v| doc.add_attr(k, v) }
+        attrs.each{|k,v| doc.add_attr(attribute_name(k), v) }
 
         log = "#{@ar_class.name} [##{attrs["db_id"]}] Adding to index"
         benchmark(log){ @connection.put_doc(doc) }
       end
 
       def remove_from_index(db_id)
-        return unless doc = search_one_by_db_id(db_id)
+        return unless doc = search_by_db_id(db_id)
         log = "#{@ar_class.name} [##{db_id}] Removing from index"
         benchmark(log){ delete_from_index(doc) }
       end
@@ -87,6 +81,10 @@ module ActsAsSearchable
       private
       def raw_search(cond, num)
         @connection.search(cond, num)
+      end
+
+      def get_docs_from(result) #:nodoc:
+        (0...result.doc_num).inject([]){|r, i| r << result.get_doc(i) }
       end
 
       def build_fulltext_condition(query, options = {})
@@ -113,6 +111,10 @@ module ActsAsSearchable
 
       def benchmark(log, &block)
         @ar_class.benchmark(log, &block)
+      end
+
+      def attribute_name(attribute)
+        SYSTEM_ATTRIBUTES.include?(attribute.to_s) ? "@#{attribute}" : "#{attribute}"
       end
     end
   end

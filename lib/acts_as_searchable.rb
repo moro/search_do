@@ -210,7 +210,7 @@ module ActsAsSearchable
     end
 
     def raw_matches(query = "", options = {})
-      search_backend.raw_matches(query, options)
+      search_backend.serch_all(query, options)
     end
 
     # Clear all entries from index
@@ -264,12 +264,6 @@ module ActsAsSearchable
       search_backend.remove_from_index(self.id)
     end
 
-    protected
-
-    def attribute_name(attribute)
-      EstraierPure::SYSTEM_ATTRIBUTES.include?(attribute.to_s) ? "@#{attribute}" : "#{attribute}"
-    end
-
     private
     def search_texts
       searchable_fields.map{|f| send(f) }
@@ -287,7 +281,7 @@ module ActsAsSearchable
         attributes_to_store.each do |attribute, method|
           value = send(method || attribute)
           value = value.xmlschema if value.is_a?(Time)
-          attrs[attribute_name(attribute)] = value.to_s
+          attrs[attribute] = value.to_s
         end
       end
       attrs
@@ -296,10 +290,6 @@ module ActsAsSearchable
 end
 
 module EstraierPure
-  unless defined?(SYSTEM_ATTRIBUTES)
-    SYSTEM_ATTRIBUTES = %w( uri digest cdate mdate adate title author type lang genre size weight misc )
-  end
-
   class Node
     def list
       return false unless @url

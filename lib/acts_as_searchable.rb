@@ -77,8 +77,6 @@ require 'vendor/estraierpure'
 # See ActiveRecord::Acts::Searchable::ClassMethods#acts_as_searchable for per-model configuration options
 #
 module ActsAsSearchable
-  MULTIBYTE_SPACE = [0x3000].pack("U")
-  PRESERVED_QUERY_WORDS_RE = /(AND|OR|ANDNOT)/
 
   def self.included(base) #:nodoc:
     base.extend ClassMethods
@@ -158,7 +156,7 @@ module ActsAsSearchable
         after_save    :clear_changed_attributes
       end
 
-      connect_estraier
+      connect_backend
     end
 
     # Perform a fulltext search against the Hyper Estraier index.
@@ -212,44 +210,12 @@ module ActsAsSearchable
     end
 
     def raw_matches(query = "", options = {})
-
-      cond = build_fulltext_condition(query, options)
-
-      matches = nil
-      seconds = Benchmark.realtime do
-        result = search_backend.search(cond, 1);
-        return (result.doc_num rescue 0) if options[:count]
-        return [] unless result
-        matches = search_backend.get_docs_from(result)
-      end
-
-      logger.debug do
-        connection.send(:format_log_entry,
-          "#{self.to_s} seach for '#{query}' (#{sprintf("%f", seconds)})",
-          "Condition: #{cond.to_s}")
-      end
-
-      return matches
-    end
-
-    def build_fulltext_condition(query, options = {})
-      options = {:limit => 100, :offset => 0}.merge(options)
-      options.assert_valid_keys(VALID_FULLTEXT_OPTIONS)
-
-      cond = new_estraier_condition
-      cond.set_phrase tokenize_query(query)
-      [options[:attributes]].flatten.reject { |a| a.blank? }.each do |attr|
-        cond.add_attr attr
-      end
-      cond.set_max   options[:limit]
-      cond.set_skip  options[:offset]
-      cond.set_order options[:order] if options[:order]
-      return cond
+      search_backend.raw_matches(query, options)
     end
 
     # Clear all entries from index
     def clear_index!
-      search_backend.index.each { |d| search_backend.delete_from_index(d) if d }
+      search_backend.clear_index!
     end
 
     # Peform a full re-index of the model data for this model
@@ -257,27 +223,12 @@ module ActsAsSearchable
       find(:all).each { |r| r.update_index(true) }
     end
 
-    def new_estraier_condition #:nodoc
-      cond = EstraierPure::Condition::new
-      cond.set_options(EstraierPure::Condition::SIMPLE | EstraierPure::Condition::USUAL)
-      cond
-    end
-
-    def tokenize_query(query)
-      tokens = query.scan(/'([^']*)'|"([^"]*)"|([^\s#{MULTIBYTE_SPACE}]*)/).flatten.reject(&:blank?)
-      tokens.map do |token|
-        token.gsub!(PRESERVED_QUERY_WORDS_RE, $1.downcase) if token =~ PRESERVED_QUERY_WORDS_RE
-        token.gsub!(/\A['"]|['"]\z/, '') # strip quatos
-        token
-      end.join(" AND ")
-    end
-
     protected
 
-    def connect_estraier #:nodoc:
+    def connect_backend #:nodoc:
       self.search_backend = Backends::HyperEstraier.new(estraier_node,
-                                                             estraier_host, estraier_port,
-                                                             estraier_user, estraier_password)
+                                                        estraier_host, estraier_port,
+                                                        estraier_user, estraier_password)
     end
 
     def estraier_config #:nodoc:
@@ -305,13 +256,6 @@ module ActsAsSearchable
       add_to_index
     end
 
-    # Retrieve index record for current model object
-    def estraier_doc
-      cond = self.class.new_estraier_condition
-      cond.add_attr("db_id NUMEQ #{self.id}")
-      search_backend.search_one(cond)
-    end
-
     protected
 
     def add_to_index #:nodoc:
@@ -320,9 +264,7 @@ module ActsAsSearchable
     end
 
     def remove_from_index #:nodoc:
-      return unless doc = estraier_doc
-      seconds = Benchmark.realtime { search_backend.delete_from_index(doc) }
-      logger.debug "#{self.class.to_s} [##{id}] Removing from index (#{sprintf("%f", seconds)})"
+      search_backend.remove_from_index(self)
     end
 
     def document_object #:nodoc:

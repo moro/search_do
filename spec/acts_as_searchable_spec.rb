@@ -31,20 +31,6 @@ describe Story, "extended by acts_as_searchable_enhance" do
     Story.attributes_to_store["mdate"].should  == "updated_at"
   end
 
-  describe "tokenize_query" do
-    it "tokenize_query('ruby vim').should == 'ruby AND vim'" do
-      Story.tokenize_query('ruby vim').should == 'ruby AND vim'
-    end
-
-    it "tokenize_query('\"ruby on rails\" vim').should == 'ruby on rails AND vim'" do
-      Story.tokenize_query('"ruby on rails" vim').should == 'ruby on rails AND vim'
-    end
-
-    it "tokenize_query('\"ruby on rails\"　vim').should == 'ruby on rails AND vim'" do
-      Story.tokenize_query('"ruby on rails"　vim').should == 'ruby on rails AND vim'
-    end
-  end
-
   describe "separate node by model classname" do
     before(:all) do
       OtherKlass = Class.new(ActiveRecord::Base)
@@ -60,10 +46,6 @@ describe Story, "extended by acts_as_searchable_enhance" do
     it "estraier_node should == 'aas_e_test_stories'" do
       Story.estraier_node.should == 'aas_e_test_stories'
     end
-
-    it "condition should not include type_base attribute" do
-      Story.new_estraier_condition.attrs.should_not include("type STREQ #{Story.to_s}")
-    end
   end
 
   describe "extract matched_ids from fulltext_search" do
@@ -73,15 +55,15 @@ describe Story, "extended by acts_as_searchable_enhance" do
 
       @mock_results = @story_ids.map{|id| mock("ResultDocument_#{id}", :attr => id) }
       nres = EstraierPure::NodeResult.new(@mock_results, {})
-      Story.search_backend.stub!(:search).and_return(nres)
+      Story.search_backend.stub!(:raw_search).and_return(nres)
     end
 
     it "matched_ids should == [story_ids]" do
       Story.matched_ids("hoge").should == @story_ids
     end
 
-    it "matched_ids should call estraier_connection#search()" do
-      Story.search_backend.should_receive(:search)
+    it "matched_ids should call search_backend#raw_search()" do
+      Story.search_backend.should_receive(:raw_search)
       Story.matched_ids("hoge")
     end
   end
@@ -198,3 +180,18 @@ describe "StoryWithoutAutoUpdate" do
   end
 end
 
+describe ActsAsSearchable::Utils do
+  describe "tokenize_query" do
+    it "tokenize_query('ruby vim').should == 'ruby AND vim'" do
+      ActsAsSearchable::Utils.tokenize_query('ruby vim').should == 'ruby AND vim'
+    end
+
+    it "tokenize_query('\"ruby on rails\" vim').should == 'ruby on rails AND vim'" do
+      ActsAsSearchable::Utils.tokenize_query('"ruby on rails" vim').should == 'ruby on rails AND vim'
+    end
+
+    it "tokenize_query('\"ruby on rails\"　vim').should == 'ruby on rails AND vim'" do
+      ActsAsSearchable::Utils.tokenize_query('"ruby on rails"　vim').should == 'ruby on rails AND vim'
+    end
+  end
+end

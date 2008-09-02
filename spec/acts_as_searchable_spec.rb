@@ -73,7 +73,7 @@ describe Story, "extended by acts_as_searchable_enhance" do
 
       @mock_results = @story_ids.map{|id| mock("ResultDocument_#{id}", :attr => id) }
       nres = EstraierPure::NodeResult.new(@mock_results, {})
-      Story.estraier_connection.stub!(:search).and_return(nres)
+      Story.search_backend.stub!(:search).and_return(nres)
     end
 
     it "matched_ids should == [story_ids]" do
@@ -81,7 +81,7 @@ describe Story, "extended by acts_as_searchable_enhance" do
     end
 
     it "matched_ids should call estraier_connection#search()" do
-      Story.estraier_connection.should_receive(:search)
+      Story.search_backend.should_receive(:search)
       Story.matched_ids("hoge")
     end
   end
@@ -155,8 +155,8 @@ describe Story, "extended by acts_as_searchable_enhance" do
       Story.matched_ids('記憶', :order => "@mdate NUMA").should == [102, 101]
     end
 
-    it "should have(3).estraier_index" do
-      Story.should have(3).estraier_index
+    it "should have(3).index" do
+      Story.search_backend.should have(3).index
     end
   end
 
@@ -168,13 +168,13 @@ describe Story, "extended by acts_as_searchable_enhance" do
     end
 
     it "should update fulltext index when update 'title'" do
-      Story.estraier_connection.should_receive(:put_doc).once
+      Story.search_backend.should_receive(:add_to_index).once
       @story.title = "new title"
       @story.save
     end
 
     it "should update fulltext index when update 'popularity'" do
-      Story.estraier_connection.should_not_receive(:put_doc)
+      Story.search_backend.should_not_receive(:add_to_index)
       @story.popularity = 20
       @story.save
     end

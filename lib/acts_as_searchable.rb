@@ -24,6 +24,7 @@
 
 require 'dirty_tracking/self_made'
 require 'dirty_tracking/bridge'
+require 'backends/hyper_estraier'
 require 'vendor/estraierpure'
 
 # Specify this act if you want to provide fulltext search capabilities to your model via Hyper Estraier. This
@@ -118,7 +119,7 @@ module ActsAsSearchable
 
       send :include, ActsAsSearchable::InstanceMethods
 
-      cattr_accessor :searchable_fields, :attributes_to_store, :if_changed, :estraier_connection, :estraier_node,
+      cattr_accessor :searchable_fields, :attributes_to_store, :if_changed, :search_backend, :estraier_node,
         :estraier_host, :estraier_port, :estraier_user, :estraier_password, :fulltext_index_observing_fields
 
       node_prefix = estraier_config['node'] || RAILS_ENV
@@ -216,10 +217,10 @@ module ActsAsSearchable
 
       matches = nil
       seconds = Benchmark.realtime do
-        result = estraier_connection.search(cond, 1);
+        result = search_backend.search(cond, 1);
         return (result.doc_num rescue 0) if options[:count]
         return [] unless result
-        matches = get_docs_from(result)
+        matches = search_backend.get_docs_from(result)
       end
 
       logger.debug do
@@ -248,28 +249,12 @@ module ActsAsSearchable
 
     # Clear all entries from index
     def clear_index!
-      estraier_index.each { |d| estraier_connection.out_doc(d.attr('@id')) unless d.nil? }
+      search_backend.index.each { |d| search_backend.delete_from_index(d) if d }
     end
 
     # Peform a full re-index of the model data for this model
     def reindex!
       find(:all).each { |r| r.update_index(true) }
-    end
-
-    def estraier_index #:nodoc:
-      cond = EstraierPure::Condition::new
-      cond.add_attr("db_id NUMGT 0")
-      result = estraier_connection.search(cond, 1)
-      docs = get_docs_from(result)
-      docs
-    end
-
-    def get_docs_from(result) #:nodoc:
-      docs = []
-      for i in 0...result.doc_num
-        docs << result.get_doc(i)
-      end
-      docs
     end
 
     def new_estraier_condition #:nodoc
@@ -290,9 +275,9 @@ module ActsAsSearchable
     protected
 
     def connect_estraier #:nodoc:
-      self.estraier_connection = EstraierPure::Node::new
-      self.estraier_connection.set_url("http://#{self.estraier_host}:#{self.estraier_port}/node/#{self.estraier_node}")
-      self.estraier_connection.set_auth(self.estraier_user, self.estraier_password)
+      self.search_backend = Backends::HyperEstraier.new(estraier_node,
+                                                             estraier_host, estraier_port,
+                                                             estraier_user, estraier_password)
     end
 
     def estraier_config #:nodoc:
@@ -324,26 +309,20 @@ module ActsAsSearchable
     def estraier_doc
       cond = self.class.new_estraier_condition
       cond.add_attr("db_id NUMEQ #{self.id}")
-      result = self.estraier_connection.search(cond, 1)
-      return unless result and result.doc_num > 0
-      get_doc_from(result)
+      search_backend.search_one(cond)
     end
 
     protected
 
     def add_to_index #:nodoc:
-      seconds = Benchmark.realtime { estraier_connection.put_doc(document_object) }
+      seconds = Benchmark.realtime { search_backend.add_to_index(document_object) }
       logger.debug "#{self.class.to_s} [##{id}] Adding to index (#{sprintf("%f", seconds)})"
     end
 
     def remove_from_index #:nodoc:
       return unless doc = estraier_doc
-      seconds = Benchmark.realtime { self.estraier_connection.out_doc(doc.attr('@id')) }
+      seconds = Benchmark.realtime { search_backend.delete_from_index(doc) }
       logger.debug "#{self.class.to_s} [##{id}] Removing from index (#{sprintf("%f", seconds)})"
-    end
-
-    def get_doc_from(result) #:nodoc:
-      self.class.get_docs_from(result).first
     end
 
     def document_object #:nodoc:

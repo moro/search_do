@@ -3,11 +3,6 @@ require File.expand_path("spec_helper", File.dirname(__FILE__))
 require 'digest/sha1'
 
 describe Story, "extended by acts_as_searchable_enhance" do
-  before(:all) do
-    logger = Logger.new("/dev/null")
-    Story.logger = logger
-  end
-
   it "should respond_to :fulltext_search" do
     Story.should respond_to(:fulltext_search)
   end
@@ -127,7 +122,8 @@ describe Story, "extended by acts_as_searchable_enhance" do
       #Story.delete_all
       Story.create!(:title=>"むかしむかし", :body=>"あるところにおじいさんとおばあさんが")
       Story.reindex!
-      sleep 5
+      # waiting Estraier sync index, adjust 'cachernum' in ${estraier}/_conf if need
+      sleep 2
     end
 
     after(:all) do

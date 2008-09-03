@@ -17,6 +17,7 @@ ActiveRecord::Base.configurations = {"test" => {
   :estraier => {:host=> "localhost", :node=>"aas_e_test", :user=>"admin", :password=>"admin"}
 }.with_indifferent_access}
 
+ActiveRecord::Base.logger = Logger.new(File.directory?("log") ? "log/#{RAILS_ENV}.log" : "/dev/null")
 ActiveRecord::Base.establish_connection(:test)
 
 load File.expand_path("setup_test_model.rb", File.dirname(__FILE__))

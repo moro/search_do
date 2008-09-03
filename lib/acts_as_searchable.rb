@@ -22,9 +22,8 @@
 # Thanks: Rick Olson (technoweenie) for his numerous plugins that served
 # as an example
 
-require 'dirty_tracking/self_made'
-require 'dirty_tracking/bridge'
-require 'backends/hyper_estraier'
+require 'acts_as_searchable/dirty_tracking'
+require 'acts_as_searchable/backends/hyper_estraier'
 require 'vendor/estraierpure'
 
 # Specify this act if you want to provide fulltext search capabilities to your model via Hyper Estraier. This
@@ -115,7 +114,8 @@ module ActsAsSearchable
     def acts_as_searchable(options = {})
       return if self.included_modules.include?(ActsAsSearchable::InstanceMethods)
 
-      send :include, ActsAsSearchable::InstanceMethods
+      include ActsAsSearchable::InstanceMethods
+      include ActsAsSearchable::DirtyTracking
 
       cattr_accessor :searchable_fields, :attributes_to_store, :if_changed, :search_backend, :estraier_node,
         :estraier_host, :estraier_port, :estraier_user, :estraier_password, :fulltext_index_observing_fields
@@ -142,12 +142,6 @@ module ActsAsSearchable
 
       self.fulltext_index_observing_fields =
         (if_changed + searchable_fields + attributes_to_store.values).map(&:to_s).uniq
-
-      if defined?(ActiveRecord::Dirty) && self.included_modules.include?(ActiveRecord::Dirty)
-        include ActsAsSearchable::DirtyTracking::Bridge
-      else
-        include ActsAsSearchable::DirtyTracking::SelfMade
-      end
 
       unless options[:auto_update] == false
         after_update  :update_index

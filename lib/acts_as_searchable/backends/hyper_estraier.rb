@@ -16,6 +16,7 @@ module ActsAsSearchable
         'port' => 1978,
         'user' => 'admin',
         'password' => 'admin',
+        'backend' => 'hyper_estraier',
       }.freeze
 
       # FIXME use URI
@@ -49,24 +50,14 @@ module ActsAsSearchable
       def serch_all(query, options = {})
         cond = build_fulltext_condition(query, options)
 
-        matches = nil
-
-        seconds = Benchmark.realtime do
+        benchmark("  #{@ar_class.to_s} fulltext search, Cond: #{cond.to_s}") do
           result = raw_search(cond, 1);
-          return (result.doc_num rescue 0) if options[:count]
-          return [] unless result
-          matches = get_docs_from(result)
+          if options[:count]
+            result.doc_num rescue 0
+          else
+            result ? get_docs_from(result) : []
+          end
         end
-
-        # FIXME use logger
-=begin
-        logger.debug do
-          connection.send(:format_log_entry,
-            "#{self.to_s} seach for '#{query}' (#{sprintf("%f", seconds)})",
-            "Condition: #{cond.to_s}")
-        end
-=end
-        return matches
       end
 
       def add_to_index(texts, attrs)
@@ -74,18 +65,18 @@ module ActsAsSearchable
         texts.each{|t| doc.add_text(t) }
         attrs.each{|k,v| doc.add_attr(attribute_name(k), v) }
 
-        log = "#{@ar_class.name} [##{attrs["db_id"]}] Adding to index"
+        log = "  #{@ar_class.name} [##{attrs["db_id"]}] Adding to index"
         benchmark(log){ @connection.put_doc(doc) }
       end
 
       def remove_from_index(db_id)
         return unless doc = search_by_db_id(db_id)
-        log = "#{@ar_class.name} [##{db_id}] Removing from index"
+        log = "  #{@ar_class.name} [##{db_id}] Removing from index"
         benchmark(log){ delete_from_index(doc) }
       end
 
       def clear_index!
-        benchmark("Deleting all index"){ index.each { |d| delete_from_index(d) } }
+        benchmark("  Deleting all index"){ index.each { |d| delete_from_index(d) } }
       end
 
       private

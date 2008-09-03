@@ -3,7 +3,7 @@ require 'acts_as_searchable/backends/hyper_estraier'
 module ActsAsSearchable
   module Backends
     def connect(model_klass, config)
-      backend = config['backends'] || "hyper_estraier"
+      backend = config['backend'] || "hyper_estraier"
 
       case backend
       when "hyper_estraier", nil # default

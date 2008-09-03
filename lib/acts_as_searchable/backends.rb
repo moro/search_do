@@ -7,11 +7,7 @@ module ActsAsSearchable
 
       case backend
       when "hyper_estraier", nil # default
-        host = config['host'] || 'localhost'
-        port = config['port'] || 1978
-        user = config['user'] || 'admin'
-        password = config['password'] || 'admin'
-        Backends::HyperEstraier.new(model_klass, host, port, user, password)
+        Backends::HyperEstraier.new(model_klass, config)
       else
         raise NotImplementedError.new("#{backend} backend is not supported")
       end

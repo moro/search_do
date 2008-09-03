@@ -36,12 +36,12 @@ describe Story, "extended by acts_as_searchable_enhance" do
       end
     end
 
-    it "OtherKlass.estraier_node.should == 'aas_e_test_other_klasses'" do
-      OtherKlass.estraier_node.should == 'aas_e_test_other_klasses'
+    it "OtherKlass.search_backend.node_name.should == 'aas_e_test_other_klasses'" do
+      OtherKlass.search_backend.node_name.should == 'aas_e_test_other_klasses'
     end
 
-    it "estraier_node should == 'aas_e_test_stories'" do
-      Story.estraier_node.should == 'aas_e_test_stories'
+    it "search_backend.node_name should == 'aas_e_test_stories'" do
+      Story.search_backend.node_name.should == 'aas_e_test_stories'
     end
   end
 

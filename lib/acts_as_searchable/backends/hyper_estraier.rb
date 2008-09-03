@@ -8,7 +8,8 @@ module ActsAsSearchable
     class HyperEstraier
       SYSTEM_ATTRIBUTES = %w( uri digest cdate mdate adate title author type lang genre size weight misc )
 
-      attr_reader :connection, :node_name
+      attr_reader :connection
+      attr_accessor :node_name
 
       DEFAULT_CONFIG = {
         'host' => 'localhost',

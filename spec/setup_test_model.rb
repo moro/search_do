@@ -17,5 +17,5 @@ end
 
 require File.expand_path("../lib/estraier_admin", File.dirname(__FILE__))
 admin = EstraierAdmin.new(ActiveRecord::Base.configurations["test"][:estraier])
-admin.create_node(Story.estraier_node)
+admin.create_node(Story.search_backend.node_name)
 

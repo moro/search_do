@@ -118,15 +118,8 @@ module ActsAsSearchable
       include ActsAsSearchable::DirtyTracking
 
       cattr_accessor :searchable_fields, :attributes_to_store, :if_changed, :search_backend, :estraier_node,
-        :estraier_host, :estraier_port, :estraier_user, :estraier_password, :fulltext_index_observing_fields
+        :fulltext_index_observing_fields
 
-      node_prefix = estraier_config['node'] || RAILS_ENV
-
-      self.estraier_node        = node_prefix + '_' + self.table_name
-      self.estraier_host        = estraier_config['host'] || 'localhost'
-      self.estraier_port        = estraier_config['port'] || 1978
-      self.estraier_user        = estraier_config['user'] || 'admin'
-      self.estraier_password    = estraier_config['password'] || 'admin'
       self.searchable_fields    = options[:searchable_fields] || [ :body ]
       self.attributes_to_store  = options[:attributes] || {}
       self.if_changed           = options[:if_changed] || []
@@ -150,7 +143,7 @@ module ActsAsSearchable
         after_save    :clear_changed_attributes
       end
 
-      connect_backend
+      connect_backend(estraier_config)
     end
 
     # Perform a fulltext search against the Hyper Estraier index.
@@ -219,10 +212,11 @@ module ActsAsSearchable
 
     protected
 
-    def connect_backend #:nodoc:
-      self.search_backend = Backends::HyperEstraier.new(self,
-                                                        estraier_host, estraier_port,
-                                                        estraier_user, estraier_password)
+    def connect_backend(backend_config = {}) #:nodoc:
+      node_prefix = backend_config['node'] || RAILS_ENV
+      self.estraier_node = node_prefix + '_' + self.table_name
+
+      self.search_backend = Backends.connect(self, backend_config)
     end
 
     def estraier_config #:nodoc:

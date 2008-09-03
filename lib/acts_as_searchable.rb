@@ -23,7 +23,7 @@
 # as an example
 
 require 'acts_as_searchable/dirty_tracking'
-require 'acts_as_searchable/backends/hyper_estraier'
+require 'acts_as_searchable/backends'
 require 'vendor/estraierpure'
 
 # Specify this act if you want to provide fulltext search capabilities to your model via Hyper Estraier. This

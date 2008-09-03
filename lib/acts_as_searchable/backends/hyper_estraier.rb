@@ -47,16 +47,21 @@ module ActsAsSearchable
         get_docs_from(result).first
       end
 
+      def count(query, options={})
+        cond = build_fulltext_condition(query, options)
+        benchmark("  #{@ar_class.to_s} count fulltext, Cond: #{cond.to_s}") do
+          r = raw_search(cond, 1);
+          r.doc_num rescue 0
+        end
+      end
+
       def search_all(query, options = {})
+        return count_fulltext(query, options) if options[:count]
         cond = build_fulltext_condition(query, options)
 
         benchmark("  #{@ar_class.to_s} fulltext search, Cond: #{cond.to_s}") do
           result = raw_search(cond, 1);
-          if options[:count]
-            result.doc_num rescue 0
-          else
-            result ? get_docs_from(result) : []
-          end
+          result ? get_docs_from(result) : []
         end
       end
 

@@ -172,8 +172,6 @@ module ActsAsSearchable
     #   http://hyperestraier.sourceforge.net/uguide-en.html#searchcond
     #
     def fulltext_search(query = "", options = {})
-      ids = nil
-
       find_options = options[:find] || {}
       [ :limit, :offset ].each { |k| find_options.delete(k) } unless find_options.blank?
 
@@ -181,10 +179,15 @@ module ActsAsSearchable
       find_by_ids_scope(ids, find_options)
     end
 
+    def count_fulltext(query, options={})
+      search_backend.count(query, options)
+    end
+
     # this methods is NOT compat with original AAS
     def find_fulltext(query, options={}, with_mdate_desc_order=true)
       fulltext_option = {}
       if with_mdate_desc_order
+        # FIXME @mdate is Estraier term, should be 'updated_at' or 'updated_on'
         fulltext_option[:order] = "@mdate NUMD"
       end
       ids = matched_ids(query, fulltext_option)

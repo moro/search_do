@@ -138,6 +138,10 @@ describe Story, "extended by acts_as_searchable_enhance" do
       Story.fulltext_search('むかしむかし').should == [@story]
     end
 
+    it "count_fulltext should == 1" do
+      Story.count_fulltext('むかしむかし').should == 1
+    end
+
     # asserts HE raw_match order
     it "should searchable with '記憶', orderd @madate decend should work" do
       Story.matched_ids('記憶', :order => "@mdate NUMD").should == [101, 102]
@@ -150,6 +154,7 @@ describe Story, "extended by acts_as_searchable_enhance" do
     it "should have(3).index" do
       Story.search_backend.should have(3).index
     end
+
   end
 
   describe "partial updating" do

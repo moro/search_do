@@ -202,6 +202,10 @@ module SearchDo
       search_backend.search_all(query, options)
     end
 
+    def raw_fulltext_index
+      search_backend.index
+    end
+
     # Clear all entries from index
     def clear_index!
       search_backend.clear_index!

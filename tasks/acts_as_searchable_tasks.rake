@@ -27,14 +27,14 @@ namespace :search do
     task :create do
       raise "Pass a searchable model with MODEL=" unless ENV['MODEL']
       model_class = ENV['MODEL'].constantize
-      admin.create_node(model_class.estraier_node)
+      admin.create_node(model_class.search_backend.node_name)
     end
 
     desc "Delete HE node"
     task :delete do
       raise "Pass a searchable model with MODEL=" unless ENV['MODEL']
       model_class = ENV['MODEL'].constantize
-      admin.delete_node(model_class.estraier_node)
+      admin.delete_node(model_class.search_backend.node_name)
     end
 
     def admin

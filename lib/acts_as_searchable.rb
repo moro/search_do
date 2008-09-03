@@ -143,7 +143,7 @@ module ActsAsSearchable
         after_save    :clear_changed_attributes
       end
 
-      connect_backend(configuration)
+      connect_backend(configurations)
     end
 
     # Perform a fulltext search against the Hyper Estraier index.
@@ -192,12 +192,11 @@ module ActsAsSearchable
     end
 
     def matched_ids(query = "", options = {})
-      matches = raw_matches(query, options)
-      return matches.map{|doc| Integer(doc.attr("db_id")) }
+      search_backend.search_all_ids(query, options)
     end
 
     def raw_matches(query = "", options = {})
-      search_backend.serch_all(query, options)
+      search_backend.search_all(query, options)
     end
 
     # Clear all entries from index
@@ -211,13 +210,10 @@ module ActsAsSearchable
     end
 
     private
-    def connect_backend(backend_config = {}) #:nodoc:
+    def connect_backend(active_record_config) #:nodoc:
+      backend_config = active_record_config[RAILS_ENV]['search'] || \
+                       active_record_config[RAILS_ENV]['estraier'] || {}
       self.search_backend = Backends.connect(self, backend_config)
-    end
-
-    def configuration #:nodoc:
-      # configurations[RAILS_ENV]['estraier'] is for backward compatibility.
-      configurations[RAILS_ENV]['search'] || configurations[RAILS_ENV]['estraier'] || {}
     end
 
     def find_by_ids_scope(ids, options={})

@@ -47,7 +47,7 @@ module ActsAsSearchable
         get_docs_from(result).first
       end
 
-      def serch_all(query, options = {})
+      def search_all(query, options = {})
         cond = build_fulltext_condition(query, options)
 
         benchmark("  #{@ar_class.to_s} fulltext search, Cond: #{cond.to_s}") do
@@ -58,6 +58,10 @@ module ActsAsSearchable
             result ? get_docs_from(result) : []
           end
         end
+      end
+
+      def search_all_ids(query, options ={})
+        search_all(query, options).map{|doc| Integer(doc.attr("db_id")) }
       end
 
       def add_to_index(texts, attrs)

@@ -238,10 +238,6 @@ module ActsAsSearchable
     end
   end
 
-  def self.included(base) #:nodoc:
-    base.extend ClassMethods
-  end
-
   module InstanceMethods
     # Update index for current instance
     def update_index(force = false)

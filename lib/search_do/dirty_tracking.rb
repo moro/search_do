@@ -1,7 +1,7 @@
-require 'acts_as_searchable/dirty_tracking/self_made'
-require 'acts_as_searchable/dirty_tracking/bridge'
+require 'search_do/dirty_tracking/self_made'
+require 'search_do/dirty_tracking/bridge'
 
-module ActsAsSearchable
+module SearchDo
   module DirtyTracking
     def self.included(base)
       mod = if defined?(ActiveRecord::Dirty) && base.included_modules.include?(ActiveRecord::Dirty)

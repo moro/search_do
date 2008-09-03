@@ -1,9 +1,7 @@
 #!/usr/bin/env ruby
-# vim:set fileencoding=utf-8 filetype=ruby
-# $KCODE = 'u'
-require 'acts_as_searchable/utils'
+require 'search_do/utils'
 
-module ActsAsSearchable
+module SearchDo
   module Backends
     class HyperEstraier
       SYSTEM_ATTRIBUTES = %w( uri digest cdate mdate adate title author type lang genre size weight misc )

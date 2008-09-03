@@ -22,8 +22,8 @@
 # Thanks: Rick Olson (technoweenie) for his numerous plugins that served
 # as an example
 
-require 'acts_as_searchable/dirty_tracking'
-require 'acts_as_searchable/backends'
+require 'search_do/dirty_tracking'
+require 'search_do/backends'
 require 'vendor/estraierpure'
 
 # Specify this act if you want to provide fulltext search capabilities to your model via Hyper Estraier. This
@@ -73,9 +73,9 @@ require 'vendor/estraierpure'
 # defaults. If you don't need to change any of these it is safe to not specify the <tt>estraier</tt> hash
 # at all.
 #
-# See ActiveRecord::Acts::Searchable::ClassMethods#acts_as_searchable for per-model configuration options
+# See SearchDo::ClassMethods#acts_as_searchable for per-model configuration options
 #
-module ActsAsSearchable
+module SearchDo
 
   def self.included(base) #:nodoc:
     base.extend ClassMethods
@@ -112,10 +112,10 @@ module ActsAsSearchable
     #   Model.fulltext_search('query', :attributes => 'blog STREQ poocs.net') # Returns results with a blog attribute of 'poocs.net'
     #
     def acts_as_searchable(options = {})
-      return if self.included_modules.include?(ActsAsSearchable::InstanceMethods)
+      return if self.included_modules.include?(SearchDo::InstanceMethods)
 
-      include ActsAsSearchable::InstanceMethods
-      include ActsAsSearchable::DirtyTracking
+      include SearchDo::InstanceMethods
+      include SearchDo::DirtyTracking
 
       cattr_accessor :searchable_fields, :attributes_to_store, :if_changed,
                      :search_backend, :fulltext_index_observing_fields

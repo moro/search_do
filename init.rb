@@ -1,4 +1,4 @@
-require 'acts_as_searchable'
+require 'search_do'
 
-ActiveRecord::Base.send :include, ActsAsSearchable
+ActiveRecord::Base.send :include, SearchDo
 

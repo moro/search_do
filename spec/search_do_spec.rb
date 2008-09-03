@@ -195,18 +195,18 @@ describe "StoryWithoutAutoUpdate" do
   end
 end
 
-describe ActsAsSearchable::Utils do
+describe SearchDo::Utils do
   describe "tokenize_query" do
     it "tokenize_query('ruby vim').should == 'ruby AND vim'" do
-      ActsAsSearchable::Utils.tokenize_query('ruby vim').should == 'ruby AND vim'
+      SearchDo::Utils.tokenize_query('ruby vim').should == 'ruby AND vim'
     end
 
     it "tokenize_query('\"ruby on rails\" vim').should == 'ruby on rails AND vim'" do
-      ActsAsSearchable::Utils.tokenize_query('"ruby on rails" vim').should == 'ruby on rails AND vim'
+      SearchDo::Utils.tokenize_query('"ruby on rails" vim').should == 'ruby on rails AND vim'
     end
 
     it "tokenize_query('\"ruby on rails\"　vim').should == 'ruby on rails AND vim'" do
-      ActsAsSearchable::Utils.tokenize_query('"ruby on rails"　vim').should == 'ruby on rails AND vim'
+      SearchDo::Utils.tokenize_query('"ruby on rails"　vim').should == 'ruby on rails AND vim'
     end
   end
 end

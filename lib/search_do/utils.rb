@@ -1,5 +1,5 @@
 
-module ActsAsSearchable
+module SearchDo
   module Utils
     MULTIBYTE_SPACE = [0x3000].pack("U")
     PRESERVED_QUERY_WORDS_RE = /(AND|OR|ANDNOT)/

@@ -1,4 +1,4 @@
-module ActsAsSearchable
+module SearchDo
   module DirtyTracking
     module Bridge
 

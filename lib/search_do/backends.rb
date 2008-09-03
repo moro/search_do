@@ -1,6 +1,6 @@
-require 'acts_as_searchable/backends/hyper_estraier'
+require 'search_do/backends/hyper_estraier'
 
-module ActsAsSearchable
+module SearchDo
   module Backends
     def connect(model_klass, config)
       backend = config['backend'] || "hyper_estraier"

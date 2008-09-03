@@ -1,5 +1,5 @@
 
-module ActsAsSearchable
+module SearchDo
   module DirtyTracking
     module SelfMade
       def self.included(base)

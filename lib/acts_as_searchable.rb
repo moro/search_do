@@ -117,8 +117,8 @@ module ActsAsSearchable
       include ActsAsSearchable::InstanceMethods
       include ActsAsSearchable::DirtyTracking
 
-      cattr_accessor :searchable_fields, :attributes_to_store, :if_changed, :search_backend, :estraier_node,
-        :fulltext_index_observing_fields
+      cattr_accessor :searchable_fields, :attributes_to_store, :if_changed,
+                     :search_backend, :fulltext_index_observing_fields
 
       self.searchable_fields    = options[:searchable_fields] || [ :body ]
       self.attributes_to_store  = options[:attributes] || {}
@@ -143,7 +143,7 @@ module ActsAsSearchable
         after_save    :clear_changed_attributes
       end
 
-      connect_backend(estraier_config)
+      connect_backend(configuration)
     end
 
     # Perform a fulltext search against the Hyper Estraier index.
@@ -210,20 +210,16 @@ module ActsAsSearchable
       find(:all).each { |r| r.update_index(true) }
     end
 
-    protected
-
+    private
     def connect_backend(backend_config = {}) #:nodoc:
-      node_prefix = backend_config['node'] || RAILS_ENV
-      self.estraier_node = node_prefix + '_' + self.table_name
-
       self.search_backend = Backends.connect(self, backend_config)
     end
 
-    def estraier_config #:nodoc:
-      configurations[RAILS_ENV]['estraier'] or {}
+    def configuration #:nodoc:
+      # configurations[RAILS_ENV]['estraier'] is for backward compatibility.
+      configurations[RAILS_ENV]['search'] || configurations[RAILS_ENV]['estraier'] || {}
     end
 
-    private
     def find_by_ids_scope(ids, options={})
       return [] if ids.blank?
       with_scope(:find=>{:conditions=>["#{table_name}.id IN (?)", ids]}) do

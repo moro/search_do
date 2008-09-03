@@ -8,15 +8,24 @@ module ActsAsSearchable
     class HyperEstraier
       SYSTEM_ATTRIBUTES = %w( uri digest cdate mdate adate title author type lang genre size weight misc )
 
-      attr_reader :connection
+      attr_reader :connection, :node_name
+
+      DEFAULT_CONFIG = {
+        'host' => 'localhost',
+        'port' => 1978,
+        'user' => 'admin',
+        'password' => 'admin',
+      }.freeze
 
       # FIXME use URI
-      def initialize(ar_class, host, port, user, password)
+      def initialize(ar_class, config = {})
         @ar_class = ar_class
-        @connection = EstraierPure::Node.new
+        config = DEFAULT_CONFIG.merge(config)
+        self.node_name = calculate_node_name(config)
 
-        @connection.set_url("http://#{host}:#{port}/node/#{ar_class.estraier_node}")
-        @connection.set_auth(user, password)
+        @connection = EstraierPure::Node.new
+        @connection.set_url("http://#{config['host']}:#{config['port']}/node/#{self.node_name}")
+        @connection.set_auth(config['user'], config['password'])
       end
 
       def index
@@ -111,6 +120,11 @@ module ActsAsSearchable
 
       def benchmark(log, &block)
         @ar_class.benchmark(log, &block)
+      end
+
+      def calculate_node_name(config)
+        node_prefix = config['node_prefix'] || config['node'] || RAILS_ENV
+        "#{node_prefix}_#{@ar_class.table_name}"
       end
 
       def attribute_name(attribute)

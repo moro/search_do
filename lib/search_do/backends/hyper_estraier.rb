@@ -69,8 +69,8 @@ module SearchDo
 
       def add_to_index(texts, attrs)
         doc = EstraierPure::Document::new
-        texts.each{|t| doc.add_text(t) }
-        attrs.each{|k,v| doc.add_attr(attribute_name(k), v) }
+        texts.reject(&:blank?).each{|t| doc.add_text(textise(t)) }
+        attrs.reject{|k,v| v.blank?}.each{|k,v| doc.add_attr(attribute_name(k), textise(v)) }
 
         log = "  #{@ar_class.name} [##{attrs["db_id"]}] Adding to index"
         benchmark(log){ @connection.put_doc(doc) }
@@ -89,6 +89,14 @@ module SearchDo
       private
       def raw_search(cond, num)
         @connection.search(cond, num)
+      end
+
+      def textise(obj) # :nodoc:
+        case obj
+        when Time then obj.iso8601
+        when Date, DateTime then obj.to_s # Date#to_s equals iso8601
+        else obj.to_s
+        end
       end
 
       def get_docs_from(result) #:nodoc:

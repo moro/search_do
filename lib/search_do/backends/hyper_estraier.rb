@@ -32,7 +32,7 @@ module SearchDo
         cond = EstraierPure::Condition::new
         cond.add_attr("db_id NUMGT 0")
         result = raw_search(cond, 1)
-        get_docs_from(result)
+        result ? get_docs_from(result) : []
       end
 
       def search_by_db_id(id)

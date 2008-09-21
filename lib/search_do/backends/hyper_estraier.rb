@@ -46,7 +46,7 @@ module SearchDo
       end
 
       def count(query, options={})
-        cond = build_fulltext_condition(query, options)
+        cond = build_fulltext_condition(query, options.merge(:count=>true))
         benchmark("  #{@ar_class.to_s} count fulltext, Cond: #{cond.to_s}") do
           r = raw_search(cond, 1);
           r.doc_num rescue 0
@@ -54,7 +54,6 @@ module SearchDo
       end
 
       def search_all(query, options = {})
-        return count_fulltext(query, options) if options[:count]
         cond = build_fulltext_condition(query, options)
 
         benchmark("  #{@ar_class.to_s} fulltext search, Cond: #{cond.to_s}") do
@@ -64,7 +63,7 @@ module SearchDo
       end
 
       def search_all_ids(query, options ={})
-        search_all(query, options).map{|doc| Integer(doc.attr("db_id")) }
+        search_all(query, options).map{|doc| doc.attr("db_id").to_i }
       end
 
       def add_to_index(texts, attrs)
@@ -86,7 +85,8 @@ module SearchDo
         benchmark("  Deleting all index"){ index.each { |d| delete_from_index(d) } }
       end
 
-      private
+    private
+    
       def raw_search(cond, num)
         @connection.search(cond, num)
       end
@@ -115,10 +115,24 @@ module SearchDo
         [options[:attributes]].flatten.reject { |a| a.blank? }.each do |attr|
           cond.add_attr attr
         end
-        cond.set_max   options[:limit]
+        cond.set_max   options[:limit] unless options[:count]
         cond.set_skip  options[:offset]
-        cond.set_order options[:order] if options[:order]
+        cond.set_order translate_order_to_he(options[:order]) if options[:order]
         return cond
+      end
+      
+      def translate_order_to_he(order)
+        order = order.to_s.downcase.strip
+        case order
+          when /^updated_at[ ]{0,1}/,/^updated_on[ ]{0,1}/ then "@mdate " + numd_or_numa(order)
+          when /^created_at[ ]{0,1}/,/^created_on[ ]{0,1}/ then "@cdate " + numd_or_numa(order)
+          when /^id[ ]{0,1}/ then "db_id " + numd_or_numa(order)
+          else order
+        end
+      end
+
+      def numd_or_numa(order)
+        order =~ / asc$/ ? "NUMA" : "NUMD"
       end
 
       def delete_from_index(document)

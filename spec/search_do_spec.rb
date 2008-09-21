@@ -138,6 +138,12 @@ describe Story, "extended by acts_as_searchable_enhance" do
     it "counts correctly using count_fulltext" do
       Story.count_fulltext('むかしむかし').should == 1
     end
+    
+    it "finds all object when searching for ''" do
+      pending do
+        Story.fulltext_search('').size.should == Story.count
+      end
+    end
 
     # asserts HE raw_match order
     it "finds in correct order(descending)" do
@@ -146,6 +152,12 @@ describe Story, "extended by acts_as_searchable_enhance" do
 
     it "finds in correct order(ascending)" do
       Story.matched_ids('記憶', :order => "@mdate NUMA").should == [102, 101]
+    end
+    
+    it "preserves order of found objects" do
+      pending do
+        Story.fulltext_search('記憶', :order => "@mdate NUMA").map(&:id).should == [102, 101]
+      end
     end
 
     it "has all objects in index" do
@@ -193,15 +205,19 @@ end
 
 describe SearchDo::Utils do
   describe "tokenize_query" do
-    it "tokenize_query('ruby vim').should == 'ruby AND vim'" do
+    it "does not convert empty strings to nil" do
+      SearchDo::Utils.tokenize_query('').should == ''
+    end
+    
+    it "combines words with AND'" do
       SearchDo::Utils.tokenize_query('ruby vim').should == 'ruby AND vim'
     end
 
-    it "tokenize_query('\"ruby on rails\" vim').should == 'ruby on rails AND vim'" do
+    it %[coverts '"ruby on rails" vim' to 'ruby on rails AND vim'] do
       SearchDo::Utils.tokenize_query('"ruby on rails" vim').should == 'ruby on rails AND vim'
     end
 
-    it "tokenize_query('\"ruby on rails\"　vim').should == 'ruby on rails AND vim'" do
+    it %[converts long unicode spaces] do
       SearchDo::Utils.tokenize_query('"ruby on rails"　vim').should == 'ruby on rails AND vim'
     end
   end

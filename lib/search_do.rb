@@ -184,12 +184,10 @@ module SearchDo
     end
 
     # this methods is NOT compat with original AAS
+    #FIXME is see no need for this method
     def find_fulltext(query, options={}, with_mdate_desc_order=true)
       fulltext_option = {}
-      if with_mdate_desc_order
-        # FIXME @mdate is Estraier term, should be 'updated_at' or 'updated_on'
-        fulltext_option[:order] = "@mdate NUMD"
-      end
+      fulltext_option[:order] = :updated_at if with_mdate_desc_order
       ids = matched_ids(query, fulltext_option)
       find_by_ids_scope(ids, options)
     end
@@ -216,7 +214,8 @@ module SearchDo
       find(:all).each { |r| r.update_index(true) }
     end
 
-    private
+  private
+  
     def connect_backend(active_record_config) #:nodoc:
       backend_config = active_record_config[RAILS_ENV]['search'] || \
                        active_record_config[RAILS_ENV]['estraier'] || {}

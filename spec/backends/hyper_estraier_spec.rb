@@ -33,5 +33,30 @@ describe SearchDo::Backends::HyperEstraier do
       @backend.count(@time.iso8601).should > 0
     end
   end
+  
+  describe "building conditions" do
+    it "does not use limit for counting" do
+      @backend.send(:build_fulltext_condition,'',:count=>true).max.should == -1
+    end
+    
+    describe "translating rails-terms" do
+      #symbols and desc <-> DESC only need testing once, to see if order values get normalized
+      ['updated_at','updated_on',:updated_at,'updated_at DESC','updated_at desc'].each do |order|
+        it "translates #{order}" do
+          @backend.send(:build_fulltext_condition,'',:order=>order).order.should == "@mdate NUMD"
+        end
+      end
+      ['created_at','created_on','created_at DESC'].each do |order|
+        it "translates #{order}" do
+          @backend.send(:build_fulltext_condition,'',:order=>order).order.should == "@cdate NUMD"
+        end
+      end
+      ['id','id DESC'].each do |order|
+        it "translates #{order}" do
+          @backend.send(:build_fulltext_condition,'',:order=>order).order.should == "db_id NUMD"
+        end
+      end
+    end
+  end
 end
 

@@ -123,7 +123,7 @@ describe Story, "extended by acts_as_searchable_enhance" do
       Story.create!(:title=>"むかしむかし", :body=>"あるところにおじいさんとおばあさんが")
       Story.reindex!
       # waiting Estraier sync index, adjust 'cachernum' in ${estraier}/_conf if need
-      sleep 3
+      sleep 6
     end
 
     after(:all) do
@@ -134,27 +134,26 @@ describe Story, "extended by acts_as_searchable_enhance" do
       @story = Story.find_by_title("むかしむかし")
     end
 
-    it "should searchable" do
+    it "finds a indexed object" do
       Story.fulltext_search('むかしむかし').should == [@story]
     end
 
-    it "count_fulltext should == 1" do
+    it "counts correctly using count_fulltext" do
       Story.count_fulltext('むかしむかし').should == 1
     end
 
     # asserts HE raw_match order
-    it "should searchable with '記憶', orderd @madate decend should work" do
+    it "finds in correct order(descending)" do
       Story.matched_ids('記憶', :order => "@mdate NUMD").should == [101, 102]
     end
 
-    it "should searchable with '記憶', orderd @mdate ascend should work" do
+    it "finds in correct order(ascending)" do
       Story.matched_ids('記憶', :order => "@mdate NUMA").should == [102, 101]
     end
 
-    it "should have(3).index" do
-      Story.search_backend.should have(3).index
+    it "has all objects in index" do
+      Story.search_backend.index.size.should == Story.count
     end
-
   end
 
   describe "partial updating" do

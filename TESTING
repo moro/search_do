@@ -1,0 +1,6 @@
+#Install:
+sqlite -- http://wiki.rubyonrails.org/rails/pages/RailsOnUbuntu
+gem install rspec
+
+#Run
+rake spec

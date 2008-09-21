@@ -1,40 +1,31 @@
-= acts_as_searchable
+= search_do
 
-This library adds fulltext searching capabilities based on Hyper Estraier (http://hyperestraier.sourceforge.net/) to
-an ActiveRecord model.
+Library for fulltext search integration with active record using multiple backends.
+
+Supports:
+Hyper Estraier (http://hyperestraier.sourceforge.net/) an ActiveRecord model.
 
 Original is written by scoop see
 - http://github.com/scoop/acts_as_searchable/tree/master
 - http://poocs.net/2006/4/6/introducing-acts-as-searchable
 
 This fork is maintained by MOROHASHI Kyosuke
-- http://github.com/moro/acts_as_searchable/tree/master
+- http://github.com/moro/search_do/tree/master
+
 
 == Pre-requisites
 
 A working Hyper Estraier instance, setup instructions:
 
 * http://hyperestraier.sourceforge.net/nguide-en.html
+* http://pragmatig.wordpress.com/2008/05/06/getting-started-with-acts_as_searchable-on-ubuntu/
 
-== Original Resources
 
-Install
+== Install
 
-* gem install acts_as_searchable
+* script/plugin install git://github.com/moro/search_do.git
 
-Bugtracking
 
-* http://trac.poocs.net/projects/plugins
-
-Rubyforge project
-
-* http://rubyforge.org/projects/ar-searchable
-
-RDocs
-
-* http://ar-searchable.rubyforge.org
-
-Subversion
-
-* svn://poocs.net/plugins/trunk/acts_as_searchable
-
+== Bugtracking
+* fork and request pull
+* send a message http://github.com/moro

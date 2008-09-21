@@ -1,5 +1,14 @@
 require 'rubygems'
+require 'spec'
 
+desc "Run all specs in spec directory"
+task :spec do |t|
+  options = "--colour --format progress --loadby --reverse"
+  files = FileList['spec/**/*_spec.rb']
+  system("spec #{options} #{files}")
+end
+
+#OLD and unused ?
 Gem::manage_gems
 
 require 'rake/rdoctask'
@@ -16,6 +25,7 @@ RUBY_FORGE_USER    = 'scoop'
 
 desc 'Default: run unit tests.'
 task :default => :test
+
 
 desc 'Test the acts_as_searchable plugin.'
 Rake::TestTask.new(:test) do |t|

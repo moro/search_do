@@ -119,15 +119,12 @@ describe Story, "extended by acts_as_searchable_enhance" do
   describe "search using real HyperEstraier (End-to-End test)" do
     fixtures :stories
     before(:all) do
+      Story.clear_index!
       #Story.delete_all
       Story.create!(:title=>"むかしむかし", :body=>"あるところにおじいさんとおばあさんが")
       Story.reindex!
       # waiting Estraier sync index, adjust 'cachernum' in ${estraier}/_conf if need
-      sleep 6
-    end
-
-    after(:all) do
-      Story.clear_index!
+      sleep 1
     end
 
     before(:each) do

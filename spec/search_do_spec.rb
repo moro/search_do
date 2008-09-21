@@ -123,7 +123,7 @@ describe Story, "extended by acts_as_searchable_enhance" do
       Story.create!(:title=>"むかしむかし", :body=>"あるところにおじいさんとおばあさんが")
       Story.reindex!
       # waiting Estraier sync index, adjust 'cachernum' in ${estraier}/_conf if need
-      sleep 2
+      sleep 3
     end
 
     after(:all) do

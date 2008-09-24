@@ -1,5 +1,20 @@
 require 'rubygems'
+require 'rake/rdoctask'
+require 'rake/packagetask'
+require 'rake/gempackagetask'
+require 'rake/testtask'
 require 'spec'
+
+# require 'rake/contrib/rubyforgepublisher'
+
+PKG_NAME      = 'search_do'
+PKG_VERSION   = '0.1.9'
+PKG_FILE_NAME = "#{PKG_NAME}-#{PKG_VERSION}"
+# RUBY_FORGE_PROJECT = 'ar-searchable'
+# RUBY_FORGE_USER    = 'scoop'
+
+desc 'Default: run specs.'
+task :default => :spec
 
 desc "Run all specs in spec directory"
 task :spec do |t|
@@ -8,31 +23,6 @@ task :spec do |t|
   system("spec #{options} #{files}")
 end
 
-#OLD and unused ?
-Gem::manage_gems
-
-require 'rake/rdoctask'
-require 'rake/packagetask'
-require 'rake/gempackagetask'
-require 'rake/testtask'
-require 'rake/contrib/rubyforgepublisher'
-
-PKG_NAME      = 'acts_as_searchable'
-PKG_VERSION   = '0.1.1'
-PKG_FILE_NAME = "#{PKG_NAME}-#{PKG_VERSION}"
-RUBY_FORGE_PROJECT = 'ar-searchable'
-RUBY_FORGE_USER    = 'scoop'
-
-desc 'Default: run unit tests.'
-task :default => :test
-
-
-desc 'Test the acts_as_searchable plugin.'
-Rake::TestTask.new(:test) do |t|
-  t.libs << 'lib'
-  t.pattern = 'test/**/*_test.rb'
-  t.verbose = true
-end
 
 desc 'Generate documentation for the acts_as_searchable plugin.'
 Rake::RDocTask.new(:rdoc) do |rdoc|
@@ -47,23 +37,27 @@ spec = Gem::Specification.new do |s|
   s.name            = PKG_NAME
   s.version         = PKG_VERSION
   s.platform        = Gem::Platform::RUBY
-  s.summary         = "acts_as_searchable adds fulltext searching capabilities based on Hyper Estraier to an ActiveRecord module."
-  s.files           = FileList["{lib,test}/**/*"].to_a + %w(README MIT-LICENSE CHANGELOG)
-  s.files.delete      "acts_as_searchable_plugin.sqlite.db"
-  s.files.delete      "acts_as_searchable_plugin.sqlite3.db"
+  s.summary         = "adds fulltext searching capabilities, currently Hyper Estraier backend is supported."
+  s.files           = FileList["{lib,recipes,tasks,spec,rails}/**/*"].to_a + %w(README MIT-LICENSE CHANGELOG)
   s.require_path    = 'lib'
-  s.autorequire     = 'acts_as_searchable'
   s.has_rdoc        = true
-  s.test_files      = Dir['test/**/*_test.rb']
-  s.author          = "Patrick Lenz"
-  s.email           = "patrick@lenz.sh"
-  s.homepage        = "http://trac.poocs.net/projects/plugins"
+  s.test_files      = Dir['spec/**/*_spec.rb']
+  s.author          = "MOROHASHI Kyosuke"
+  s.email           = "moronatural@gmail.com"
+  s.homepage        = "http://github.com/moro/search_do"
 end
 
 Rake::GemPackageTask.new(spec) do |pkg|
   pkg.need_tar = true
 end
 
+desc "update #{PKG_NAME}.gemspec"
+task "gemspec" do
+  fname = File.expand_path("#{PKG_NAME}.gemspec", File.dirname(__FILE__))
+  File.open(fname, "w"){|f| f.puts spec.to_ruby }
+end
+
+=begin
 desc "Publish the API documentation"
 task :pdoc => [:rdoc] do
   Rake::RubyForgePublisher.new(RUBY_FORGE_PROJECT, RUBY_FORGE_USER).upload
@@ -101,7 +95,7 @@ task :rubyforge_upload => :package do
       ].join("&")
 
       headers = { 'Content-Type' => 'application/x-www-form-urlencoded' }
-      
+
       http.post("/account/login.php", data, headers)
     end
 
@@ -190,3 +184,5 @@ task :rubyforge_upload => :package do
     end
   end
 end
+=end
+

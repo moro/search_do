@@ -261,26 +261,3 @@ module SearchDo
   end
 end
 
-module EstraierPure
-  class Node
-    def list
-      return false unless @url
-      turl = @url + "/list"
-      reqheads = [ "Content-Type: application/x-www-form-urlencoded" ]
-      reqheads.push("Authorization: Basic " + Utility::base_encode(@auth)) if @auth
-      reqbody = ""
-      resbody = StringIO::new
-      rv = Utility::shuttle_url(turl, @pxhost, @pxport, @timeout, reqheads, reqbody, nil, resbody)
-      @status = rv
-      return nil if rv != 200
-      lines = resbody.string.split(/\n/)
-      lines.collect { |l| val = l.split(/\t/) and { :id => val[0], :uri => val[1], :digest => val[2] } }
-    end
-  end
-
-  class Condition
-    def to_s
-      "phrase: %s, attrs: %s, max: %s, options: %s, order: %s, skip: %s" % [ phrase, attrs * ', ', max, options, order, skip ]
-    end
-  end
-end

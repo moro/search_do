@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+require 'vendor/estraierpure'
 require 'search_do/utils'
 
 module SearchDo
@@ -32,7 +33,7 @@ module SearchDo
         cond = EstraierPure::Condition::new
         cond.add_attr("db_id NUMGT 0")
         result = raw_search(cond, 1)
-        result ? get_docs_from(result) : []
+        result ? result.docs : []
       end
 
       def search_by_db_id(id)
@@ -42,7 +43,7 @@ module SearchDo
 
         result = raw_search(cond, 1)
         return nil if result.nil? || result.doc_num.zero?
-        get_docs_from(result).first
+        result.first_doc
       end
 
       def count(query, options={})
@@ -58,7 +59,7 @@ module SearchDo
 
         benchmark("  #{@ar_class.to_s} fulltext search, Cond: #{cond.to_s}") do
           result = raw_search(cond, 1);
-          result ? get_docs_from(result) : []
+          result ? result.docs : []
         end
       end
 
@@ -86,7 +87,7 @@ module SearchDo
       end
 
     private
-    
+
       def raw_search(cond, num)
         @connection.search(cond, num)
       end
@@ -97,10 +98,6 @@ module SearchDo
         when Date, DateTime then obj.to_s # Date#to_s equals iso8601
         else obj.to_s
         end
-      end
-
-      def get_docs_from(result) #:nodoc:
-        (0...result.doc_num).inject([]){|r, i| r << result.get_doc(i) }
       end
 
       def build_fulltext_condition(query, options = {})
@@ -120,7 +117,7 @@ module SearchDo
         cond.set_order translate_order_to_he(options[:order]) if options[:order]
         return cond
       end
-      
+
       def translate_order_to_he(order)
         order = order.to_s.downcase.strip
         case order
@@ -154,4 +151,7 @@ module SearchDo
     end
   end
 end
+
+# call after creating namespace SearchDo::Backends::HyperEstraier
+require 'search_do/backends/hyper_estraier/estraier_pure_extention'
 

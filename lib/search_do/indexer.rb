@@ -30,11 +30,11 @@ module SearchDo
     end
 
     def record_timestamps!
-      pr = lambda{|candidate_col| @base.column_names.include?(candidate_col) }
+      detect_col = lambda{|candidate_col| @base.column_names.include?(candidate_col) }
       @attributes_to_store[backend_vocabulary :create_timestamp] =
-        %w(created_at created_on).detect(&pr)
+        %w(created_at created_on).detect(&detect_col)
       @attributes_to_store[backend_vocabulary :update_timestamp] =
-        %w(updated_at updated_on).detect(&pr)
+        %w(updated_at updated_on).detect(&detect_col)
       expire_observing_fields_cache!
     end
 

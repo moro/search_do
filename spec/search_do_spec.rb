@@ -15,14 +15,6 @@ describe Story, "extended by acts_as_searchable_enhance" do
     Story.after_create.should include(:add_to_index)
   end
 
-  it "attributes_to_store should include @cdate" do
-    Story.attributes_to_store.should include("cdate")
-  end
-
-  it "attributes_to_store['@mdate'] should == updated_at" do
-    Story.attributes_to_store["mdate"].should  == "updated_at"
-  end
-
   describe "separate node by model classname" do
     before(:all) do
       OtherKlass = Class.new(ActiveRecord::Base)

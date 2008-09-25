@@ -22,6 +22,7 @@
 # Thanks: Rick Olson (technoweenie) for his numerous plugins that served
 # as an example
 
+require 'search_do/indexer'
 require 'search_do/dirty_tracking'
 require 'search_do/backends'
 require 'vendor/estraierpure'
@@ -114,34 +115,24 @@ module SearchDo
     def acts_as_searchable(options = {})
       return if self.included_modules.include?(SearchDo::InstanceMethods)
 
-      include SearchDo::InstanceMethods
-      include SearchDo::DirtyTracking
+      cattr_accessor :search_indexer, :search_backend
 
-      cattr_accessor :searchable_fields, :attributes_to_store, :if_changed,
-                     :search_backend, :fulltext_index_observing_fields
-
-      self.searchable_fields    = options[:searchable_fields] || [ :body ]
-      self.attributes_to_store  = options[:attributes] || {}
-      self.if_changed           = options[:if_changed] || []
-
-      unless options[:ignore_timestamp] && self.record_timestamps
-        timestamp_attr = {
-          "cdate" => %w(created_at created_on).detect{|col| self.column_names.include?(col) },
-          "mdate" => %w(updated_at updated_on).detect{|col| self.column_names.include?(col) },
-        }
-
-        self.attributes_to_store = timestamp_attr.merge(self.attributes_to_store)
+      self.search_indexer = returning(SearchDo::Indexer.new(self, configurations)) do |idx|
+        idx.searchable_fields   = options[:searchable_fields] || [ :body ]
+        idx.attributes_to_store = options[:attributes] || {}
+        idx.if_changed          = options[:if_changed] || []
       end
 
-      self.fulltext_index_observing_fields =
-        (if_changed + searchable_fields + attributes_to_store.values).map(&:to_s).uniq
+      if !options[:ignore_timestamp] && self.record_timestamps
+        search_indexer.record_timestamps!
+      end
 
       unless options[:auto_update] == false
-        after_update  :update_index
-        after_create  :add_to_index
-        after_destroy :remove_from_index
-        after_save    :clear_changed_attributes
+        search_indexer.add_callbacks!
       end
+
+      include SearchDo::InstanceMethods
+      include SearchDo::DirtyTracking
 
       connect_backend(configurations)
     end
@@ -214,8 +205,7 @@ module SearchDo
       find(:all).each { |r| r.update_index(true) }
     end
 
-  private
-  
+    private
     def connect_backend(active_record_config) #:nodoc:
       backend_config = active_record_config[RAILS_ENV]['search'] || \
                        active_record_config[RAILS_ENV]['estraier'] || {}
@@ -248,7 +238,7 @@ module SearchDo
 
     private
     def search_texts
-      searchable_fields.map{|f| send(f) }
+      search_indexer.searchable_fields.map{|f| send(f) }
     end
 
     def search_attrs
@@ -259,8 +249,8 @@ module SearchDo
         attrs["type_base"] = self.class.base_class.to_s
       end
 
-      unless attributes_to_store.blank?
-        attributes_to_store.each do |attribute, method|
+      unless (to_stores = search_indexer.attributes_to_store).blank?
+        to_stores.each do |attribute, method|
           value = send(method || attribute)
           value = value.xmlschema if value.is_a?(Time)
           attrs[attribute] = value.to_s

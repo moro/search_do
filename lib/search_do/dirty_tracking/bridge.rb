@@ -8,7 +8,7 @@ module SearchDo
         if attr_name
           cs.include?(attr_name)
         else
-          self.class.fulltext_index_observing_fields.any?{|t| cs.include?(t) }
+          search_indexer.observing_fields.any?{|t| cs.include?(t) }
         end
       end
 

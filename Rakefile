@@ -13,8 +13,8 @@ PKG_FILE_NAME = "#{PKG_NAME}-#{PKG_VERSION}"
 # RUBY_FORGE_PROJECT = 'ar-searchable'
 # RUBY_FORGE_USER    = 'scoop'
 
-desc 'Default: run specs.'
-task :default => :spec
+desc 'Default: run specs_all.'
+task :default => :spec_all
 
 desc "Run all specs in spec directory"
 task :spec do |t|
@@ -23,6 +23,18 @@ task :spec do |t|
   system("spec #{options} #{files}")
 end
 
+desc "Run specs both AR-latest and AR-2.0.x"
+task :spec_all do
+  ar20xs = (::Gem.source_index.find_name("activerecord", "<2.1") & \
+            ::Gem.source_index.find_name("activerecord", ">=2.0"))
+  if ar20xs.empty?
+    Rake::Task[:spec].invoke
+  else
+    ar20 = ar20xs.sort_by(&:version).last
+    system("rake spec")
+    system("rake spec AR=#{ar20.version}")
+  end
+end
 
 desc 'Generate documentation for the acts_as_searchable plugin.'
 Rake::RDocTask.new(:rdoc) do |rdoc|
